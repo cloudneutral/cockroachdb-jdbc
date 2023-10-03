@@ -1,0 +1,107 @@
+actor App
+participant DataSource
+participant CockroachDriver
+participant DriverManager
+participant PgConnection
+
+App->+DataSource:getConnection
+DataSource->+CockroachDriver:connect
+CockroachDriver-->+DriverManager:getConnection
+DriverManager-->*+PGConnection:<<create>>
+PGConnection-->-DriverManager:
+DriverManager-->-CockroachDriver: PGConnection
+
+CockroachDriver-->*+CockroachConnection:<<PGConnection>>
+CockroachConnection-->-CockroachDriver: wrapper
+
+## Wrap PGConnection in retry proxy
+CockroachDriver-->*+ConnectionRetryProxy:<<CockroachConnection>>
+ConnectionRetryProxy-->-CockroachDriver: connectionProxy
+CockroachDriver-->-DataSource: connectionProxy
+DataSource-->-App: connectionProxy
+
+note over App: Repetable Connection Created
+
+# Execution sequence
+
+App->+ConnectionRetryProxy: prepareStatement
+ConnectionRetryProxy->+CockroachConnection: prepareStatement
+CockroachConnection->+PGConnection: prepareStatement
+
+PGConnection->*+PGStatement: <<create>>
+PGStatement-->-PGConnection:
+PGConnection-->-CockroachConnection: statement
+CockroachConnection-->-ConnectionRetryProxy: statement
+
+#PreparedStatementRetryProxy
+ConnectionRetryProxy->*+CockroachPreparedStatement: <<PGStatement>>
+CockroachPreparedStatement-->-ConnectionRetryProxy: wrapper
+ConnectionRetryProxy->*+PreparedStatementRetryProxy: <<CockroachPreparedStatement>>
+PreparedStatementRetryProxy-->-ConnectionRetryProxy: statementProxy
+
+ConnectionRetryProxy-->-App: statementProxy
+note over App: Repetable PreparedStatement
+
+opt Bind params
+App->+PreparedStatementRetryProxy : setObject(N,..)
+end
+
+App->PreparedStatementRetryProxy: executeUpdate
+PreparedStatementRetryProxy->+CockroachPreparedStatement: executeUpdate
+CockroachPreparedStatement->+PGStatement: executeUpdate
+PGStatement-->-CockroachPreparedStatement: E: 40001
+CockroachPreparedStatement->-PreparedStatementRetryProxy: E: 40001
+
+# Retry
+PreparedStatementRetryProxy-->+ConnectionRetryProxy: retry
+ConnectionRetryProxy->CockroachConnection:rollback
+CockroachConnection->PGConnection:rollback
+
+ConnectionRetryProxy->CockroachConnection:close
+CockroachConnection->PGConnection:close
+CockroachConnection->CockroachPreparedStatement: close
+destroy CockroachPreparedStatement
+destroy PGStatement
+destroy CockroachConnection
+destroy PGConnection
+
+ConnectionRetryProxy->ConnectionRetryProxy:wait
+
+ConnectionRetryProxy->+CockroachDriver: getConnection
+CockroachDriver->+DriverManager: getConnection
+DriverManager-->*PgConnection: <<create>>
+activate PgConnection
+PgConnection-->-DriverManager:
+DriverManager-->-CockroachDriver:
+
+CockroachDriver-->*+CockroachConnection: <<PgConnection>>
+CockroachConnection-->-CockroachDriver:
+CockroachDriver-->-ConnectionRetryProxy:
+
+ConnectionRetryProxy->ConnectionRetryProxy: setDelegate
+ConnectionRetryProxy-->+CockroachConnection: prepareStatement
+
+#
+CockroachConnection->+PgConnection: prepareStatement
+PgConnection-->*+PGStatement: <<create>>
+PGStatement-->-PgConnection:
+PgConnection-->-CockroachConnection:
+
+#CockroachConnection-->*+PGStatement: <<create>>
+#PGStatement-->-CockroachConnection:
+CockroachConnection-->-ConnectionRetryProxy: pgstatement
+
+ConnectionRetryProxy-->*+CockroachPreparedStatement: <<PGStatement>>
+CockroachPreparedStatement-->-ConnectionRetryProxy:
+
+ConnectionRetryProxy->+PreparedStatementRetryProxy: replay
+
+opt Repeat Bind params
+PreparedStatementRetryProxy->CockroachPreparedStatement: setObject(1,..)
+end
+
+PreparedStatementRetryProxy->+CockroachPreparedStatement: executeUpdate
+CockroachPreparedStatement->+PGStatement: executeUpdate
+PGStatement-->-CockroachPreparedStatement: 1
+CockroachPreparedStatement-->-PreparedStatementRetryProxy: 1
+PreparedStatementRetryProxy-->-App: 1

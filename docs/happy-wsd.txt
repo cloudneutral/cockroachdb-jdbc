@@ -1,0 +1,70 @@
+actor App
+participant DataSource
+participant CockroachDriver
+participant DriverManager
+
+App->+DataSource:getConnection
+DataSource->+CockroachDriver:connect
+CockroachDriver-->+DriverManager:getConnection
+DriverManager-->*+PGConnection:<<create>>
+PGConnection-->-DriverManager:
+DriverManager-->-CockroachDriver: PGConnection
+
+CockroachDriver-->*+CockroachConnection:<<PGConnection>>
+CockroachConnection-->-CockroachDriver: wrapper
+
+## Wrap PGConnection in retry proxy
+
+CockroachDriver-->*+ConnectionRetryProxy:<<CockroachConnection>>
+ConnectionRetryProxy-->-CockroachDriver: connectionProxy
+CockroachDriver-->-DataSource: connectionProxy
+DataSource-->-App: connectionProxy
+
+# Execution sequence - single update statement
+
+App->+ConnectionRetryProxy: prepareStatement
+ConnectionRetryProxy->+CockroachConnection: prepareStatement
+CockroachConnection->+PGConnection: prepareStatement
+
+PGConnection->*+PGStatement: <<create>>
+PGStatement-->-PGConnection:
+PGConnection-->-CockroachConnection: statement
+CockroachConnection-->-ConnectionRetryProxy: statement
+
+ConnectionRetryProxy->*+CockroachPreparedStatement: <<PGStatement>>
+CockroachPreparedStatement-->-ConnectionRetryProxy: wrapper
+ConnectionRetryProxy->*+PreparedStatementRetryProxy: <<CockroachPreparedStatement>>
+PreparedStatementRetryProxy-->-ConnectionRetryProxy: statementProxy
+
+ConnectionRetryProxy-->-App: statementProxy
+
+opt Bind params
+App->+PreparedStatementRetryProxy : setObject(N,..)
+PreparedStatementRetryProxy-->-App:
+end
+
+App->PreparedStatementRetryProxy: executeUpdate
+PreparedStatementRetryProxy-->-App: 1
+
+# Close statement
+App->+PreparedStatementRetryProxy: close
+PreparedStatementRetryProxy->+CockroachPreparedStatement:close
+CockroachPreparedStatement->+PGStatement:close
+PGStatement-->-CockroachPreparedStatement:
+destroy PGStatement
+CockroachPreparedStatement-->-PreparedStatementRetryProxy:
+destroy CockroachPreparedStatement
+PreparedStatementRetryProxy-->-App:
+destroy PreparedStatementRetryProxy
+
+
+# Close connection
+App->+ConnectionRetryProxy: close
+ConnectionRetryProxy->+CockroachConnection:close
+CockroachConnection->+PGConnection:close
+PGConnection-->-CockroachConnection:
+destroy PGConnection
+CockroachConnection-->-ConnectionRetryProxy:
+destroy CockroachConnection
+ConnectionRetryProxy-->-App:
+destroy ConnectionRetryProxy

@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:cockroachdb://kai-odin-hnb.aws-eu-north-1.cockroachlabs.cloud:26257/jdbc_test?sslmode=require
+    username: guest
+    password: KhP-aS4-AURjRin_ism76Q
