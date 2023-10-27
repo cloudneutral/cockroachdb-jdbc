@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 import javax.sql.DataSource;
 
@@ -111,7 +112,7 @@ public abstract class JdbcUtils {
                                         MAX_WAIT_MILLIS));
                         logger.debug("Transient SQL exception detected - attempt: {}, sleeping {}: [{}]",
                                 attempt, delay, throwable.toString());
-                        Thread.sleep(delay.toMillis());
+                        TimeUnit.MILLISECONDS.sleep(delay.toMillis());
                     } catch (InterruptedException ex) {
                         Thread.currentThread().interrupt();
                         throw new IllegalStateException(ex);

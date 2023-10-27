@@ -14,6 +14,8 @@
     <inceptionYear>2023</inceptionYear>
 
     <properties>
+        <java.version>17</java.version>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <maven.compiler.xlint.extras/>
@@ -21,17 +23,18 @@
         <!-- Integration test groups denoted with @Tag -->
         <groups>unit-test</groups>
 
-        <postgresql.version>42.5.4</postgresql.version>
-        <slf4j.version>2.0.6</slf4j.version>
-        <logback.version>1.4.5</logback.version>
-        <mockito.version>4.8.1</mockito.version>
-        <junit-jupiter.version>5.9.2</junit-jupiter.version>
+        <postgresql.version>42.6.0</postgresql.version>
+        <hikari.version>5.0.1</hikari.version>
+        <slf4j.version>2.0.9</slf4j.version>
+        <logback.version>1.4.11</logback.version>
+        <mockito.version>5.6.0</mockito.version>
+        <junit-jupiter.version>5.10.0</junit-jupiter.version>
     </properties>
 
     <modules>
         <module>cockroachdb-jdbc-driver</module>
-        <module>cockroachdb-jdbc-it</module>
         <module>cockroachdb-jdbc-demo</module>
+        <module>cockroachdb-jdbc-test</module>
     </modules>
 
     <scm>
@@ -87,30 +90,30 @@
                 <artifactId>logback-core</artifactId>
                 <version>${logback.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
                 <version>${logback.version}</version>
-                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.zaxxer</groupId>
+                <artifactId>HikariCP</artifactId>
+                <version>${hikari.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-engine</artifactId>
                 <version>${junit-jupiter.version}</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
                 <artifactId>junit-jupiter-params</artifactId>
                 <version>${junit-jupiter.version}</version>
-                <scope>test</scope>
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-core</artifactId>
                 <version>${mockito.version}</version>
-                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -121,7 +124,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
-                    <version>3.2.1</version>
+                    <version>3.3.0</version>
                     <executions>
                         <execution>
                             <id>attach-sources</id>
@@ -135,7 +138,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M9</version>
+                    <version>3.1.2</version>
                     <configuration>
                         <groups>${groups}</groups>
                     </configuration>
@@ -143,7 +146,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.10.1</version>
+                    <version>3.11.0</version>
                     <configuration>
                         <parameters>true</parameters>
                         <showDeprecation>false</showDeprecation>
@@ -169,7 +172,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
-                    <version>3.2.0</version>
+                    <version>3.3.1</version>
                     <configuration>
                         <failOnError>false</failOnError>
                         <filesets>
@@ -187,7 +190,7 @@
                 <plugin>
                     <groupId>com.amashchenko.maven.plugin</groupId>
                     <artifactId>gitflow-maven-plugin</artifactId>
-                    <version>1.14.0</version>
+                    <version>1.19.0</version>
                     <configuration>
                         <fetchRemote>false</fetchRemote>
                         <verbose>true</verbose>
@@ -226,7 +229,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.8</version>
+                        <version>0.8.10</version>
                         <executions>
                             <execution>
                                 <goals>

@@ -1,15 +1,15 @@
 # CockroachDB JDBC Driver Demo
 
-This project provides a simple high-contention workload using plain JDBC to 
-showcase the effects of driver-level retries and select-for-update. It also 
-provides an option to do client side retries.
+A simple high-contention workload using plain JDBC to showcase the effects 
+of driver-level retries and select-for-update vs client-level retries. 
 
-To build the executable JAR, you need to enable the `demo-executable` maven profile:
+To build the executable JAR, you need to enable the `demo-jar` maven profile:
 
 ## Building
 
 ```shell
-../mvnw -P demo-executable clean install
+(from project-root)
+../mvnw -P demo-jar clean install
 ```
 
 ## Running
@@ -20,17 +20,19 @@ The CLI accepts a few options, use `--help` for guidance.
 java -jar target/cockroachdb-jdbc-demo.jar --help  
 ```
 
-## Demo Workload
+## Workload Description
 
-The workload consists of reads and updates on a single `bank_account` table. There are two 
-types of accounts: system and user accounts. The system accounts have an initial 
-balance which is distributed to the user accounts concurrently. There's heavy 
-contention on the system accounts and less on the user accounts.
+The workload consists of reads and updates on a single `bank_account` table. 
+There are two types of accounts: system and user accounts. The system accounts 
+have an initial balance which is distributed to the user accounts concurrently. 
+Thus, the main contention point is on the system accounts and not so much on 
+the user accounts. This particular anomaly is called P4 lost update, which is
+a write-write conflict prevented in 1SR but allowed in RC.
 
-If the workload runs to completion without any errors, the system account balances
-will be zero.
+If the workload runs to completion without any errors, the system account balances 
+will be drained to zero.
 
-SQL statements part of the `transferFunds` method that run concurrently:
+The SQL statements part of the `transferFunds` method executed concurrently:
 
 ```sql
 -- for each system account 

@@ -17,7 +17,7 @@ public abstract class SchemaSupport {
     public static void setupSchema(DataSource ds) throws Exception {
         InputStream is = JdbcDriverDemo.class.getResourceAsStream(DB_CREATE_SQL);
         if (is == null) {
-            throw new IOException("DDL file not found: " + DB_CREATE_SQL);
+            throw new IOException("SQL file not found: " + DB_CREATE_SQL);
         }
         LineNumberReader reader = new LineNumberReader(new InputStreamReader(is));
 
@@ -27,7 +27,7 @@ public abstract class SchemaSupport {
             if (!line.startsWith("--") && !line.isEmpty()) {
                 buffer.append(line);
             }
-            if (line.endsWith(";") && buffer.length() > 0) {
+            if (line.endsWith(";") && !buffer.isEmpty()) {
                 JdbcUtils.executeWithoutTransaction(ds, conn -> {
                     try (Statement statement = conn.createStatement()) {
                         statement.execute(buffer.toString());

@@ -1,0 +1,5 @@
+spring:
+  datasource:
+    url: jdbc:cockroachdb://kai-odin-11257.8nj.cockroachlabs.cloud:26257/kai-odin-11257.defaultdb?sslmode=verify-full
+    username: guest
+    password:

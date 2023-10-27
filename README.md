@@ -10,12 +10,7 @@ An open-source JDBC Type-4 driver for [CockroachDB](https://www.cockroachlabs.co
 JDBC driver ([pgjdbc](https://jdbc.postgresql.org/)) and communicates in the PostgreSQL native network
 wire (v3.0) protocol with CockroachDB.
 
-## Disclaimer
-
-This driver is an experimental prototype and not officially supported by Cockroach Labs. Use of this driver
-is entirely at your own risk and Cockroach Labs makes no guarantees or warranties about its operation.
-
-See [MIT](LICENSE.txt) license for terms and conditions.
+This project is not affiliated or supported by Cockroach Labs.
 
 ## Features
 
@@ -158,14 +153,14 @@ the building section at the end of this page.
 
 The main library for the CockroachDB JDBC driver.
 
-### cockroachdb-jdbc-it
-
-Integration tests and functional tests activated via a Maven profiles.
-See build section further down in this page.
-
 ### cockroachdb-jdbc-demo
 
 A standalone demo app to showcase the retry mechanism and other features.
+
+### cockroachdb-jdbc-test
+
+Integration and functional tests activated via Maven profiles. See build section 
+further down in this page.
 
 ## Getting Help
 
@@ -184,10 +179,9 @@ to record bugs and feature requests. If you want to raise an issue, please follo
 ### Supported CockroachDB and JDK Versions
 
 This driver is CockroachDB version agnostic and supports any version supported by the PostgreSQL
-JDBC driver v 42.5+ (pgwire protocol v3.0).
+JDBC driver v 42.6+ (pgwire protocol v3.0).
 
-It's build for Java 8 at language source and target level but requires Java 17 LTS for building.
-For more details, see the building section.
+It requires Java 17 (LTS) or later for building and at runtime. For more details, see the building section.
 
 ## URL Properties
 
@@ -392,16 +386,12 @@ This library follows [Semantic Versioning](http://semver.org/).
 
 ## Building
 
-The CockroachDB JDBC driver requires Java 17 (or later) LTS but is compiled to
-on any platform for which there is a Java 8 runtime.
-
 ### Prerequisites
 
-- JDK17+ LTS for building (OpenJDK compatible)
-- Maven 3+ (optional, embedded)
+- JDK17+ LTS (OpenJDK compatible)
+- Maven 3+ (optional, embedded wrapper available)
 
-If you want to build with the regular `mvn` command,
-you will need [Maven v3.x](https://maven.apache.org/run-maven/index.html) or above.
+If you want to build with the regular `mvn` command, you will need [Maven v3.x](https://maven.apache.org/run-maven/index.html) or above.
 
 Install the JDK (Linux):
 
@@ -444,20 +434,20 @@ Create the database:
 cockroach sql --insecure --host=localhost -e "CREATE database jdbc_test"
 ```
 
-Then activate the integration test Maven profile:
+Then activate the anomaly integration test Maven profile:
 
 ```bash
-./mvnw -P it -Dgroups=anomaly-test clean install
+./mvnw -P test-local -Dgroups=anomaly-test clean install
 ```
 
-Test groups include:
+Available test groups include:
 
 - anomaly-test - Runs through a series of RW/WR/WW anomaly tests.
 - connection-retry-test - Runs a test with connection retries enabled.
-- batch-insert-test - Batch inserts load test.
+- batch-insert-test - Batch inserts load test (using different batch sizes).
 - batch-update-test - Batch updates load test.
 
-See the [pom.xml](pom.xml) file for changing the database URL and other settings (under `ìt` profile).
+See the [pom.xml](pom.xml) file for changing the database URL and other settings (under `test` profile).
 
 ## Terms of Use
 

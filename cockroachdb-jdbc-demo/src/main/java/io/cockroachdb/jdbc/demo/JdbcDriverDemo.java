@@ -48,7 +48,7 @@ public class JdbcDriverDemo {
 
     private boolean stackTrace;
 
-    boolean retry;
+    boolean clientRetry;
 
     boolean sfu;
 
@@ -155,8 +155,8 @@ public class JdbcDriverDemo {
                 userAccountIDs.size());
 
         // Unbounded thread pool is fine since the connection pool will throttle
-        final ExecutorService unboundedPool = Executors.newScheduledThreadPool(Runtime.getRuntime()
-                .availableProcessors());
+        final ExecutorService unboundedPool = Executors.newScheduledThreadPool(
+                Runtime.getRuntime().availableProcessors());
 
         final Deque<Future<?>> futures = new ArrayDeque<>();
 
@@ -169,10 +169,12 @@ public class JdbcDriverDemo {
             systemAccountIDs.forEach(systemAccountId -> {
                 futures.add(unboundedPool.submit(() -> {
                     BigDecimal amount = new BigDecimal("100.00");
+
                     List<AccountLeg> legs = new ArrayList<>();
                     legs.add(new AccountLeg(systemAccountId, amount.negate()));
                     legs.add(new AccountLeg(userAccountId, amount));
-                    if (retry) {
+
+                    if (clientRetry) {
                         return JdbcUtils.executeWithinTransactionWithRetry(ds, transferFunds(legs));
                     } else {
                         return JdbcUtils.executeWithinTransaction(ds, transferFunds(legs));
@@ -330,23 +332,20 @@ public class JdbcDriverDemo {
             System.out.println();
             println(AnsiColor.BOLD_BRIGHT_WHITE, "Usage: java -jar cockroachdb-jdbc-demo.jar [options]");
             println(AnsiColor.BOLD_BRIGHT_WHITE, "Options include: (defaults in parenthesis)");
-            println(AnsiColor.BRIGHT_CYAN,
-                    "--url <url>         Connection URL (jdbc:cockroachdb://localhost:26257/jdbc_test)");
+            println(AnsiColor.BRIGHT_CYAN, "--url <url>         Connection URL (jdbc:cockroachdb://localhost:26257/jdbc_test)");
             println(AnsiColor.BRIGHT_CYAN, "--user <user>       Login user name (root)");
             println(AnsiColor.BRIGHT_CYAN, "--password <secret> Login password (empty)");
-            println(AnsiColor.BRIGHT_CYAN,
-                    "--isolation <level> Transaction isolation level when using psql (READ_COMMITTED)");
+            println(AnsiColor.BRIGHT_CYAN, "--isolation <level> Transaction isolation level when using psql (READ_COMMITTED)");
             println(AnsiColor.BRIGHT_CYAN, "--poolSize <N>      Connection pool size (client vCPUs x 2)");
-            println(AnsiColor.BRIGHT_CYAN,
-                    "--sfu [txn]         Enable implicit SFU. Optionally with transaction scope. (none)");
-            println(AnsiColor.BRIGHT_CYAN,
-                    "--retry [client]    Enable transaction retries. Optionally client-side. (none)");
+            println(AnsiColor.BRIGHT_CYAN, "--sfu [txn]         Enable implicit SFU. Optionally with transaction scope. (none)");
+            println(AnsiColor.BRIGHT_CYAN, "--retry [client]    Enable transaction retries. Optionally client-side. (none)");
             println(AnsiColor.BRIGHT_CYAN, "--trace             Enable SQL trace logging (false)");
             println(AnsiColor.BRIGHT_CYAN, "--verbose           Verbose logging to console (false)");
             println(AnsiColor.BRIGHT_CYAN, "--stackTrace        Print stack traces to console (false)");
-
             System.exit(1);
         }
+
+        println(AnsiColor.BOLD_BRIGHT_WHITE, "Starting JDBC driver demo");
 
         final HikariDataSource hikariDS = new HikariDataSource();
         hikariDS.setJdbcUrl(url);
@@ -356,10 +355,8 @@ public class JdbcDriverDemo {
         hikariDS.setMaximumPoolSize(poolSize);
         hikariDS.setMinimumIdle(poolSize / 2);
         hikariDS.setMaxLifetime(TimeUnit.MINUTES.toMillis(3));
-        hikariDS.setIdleTimeout(TimeUnit.MINUTES.toMillis(1));
-        hikariDS.setConnectionTimeout(TimeUnit.MINUTES.toMillis(1));
-
-        // No INSERTs in this demo, but still
+        hikariDS.setIdleTimeout(TimeUnit.SECONDS.toMillis(60));
+        hikariDS.setConnectionTimeout(TimeUnit.SECONDS.toMillis(60));
         hikariDS.addDataSourceProperty(PGProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
 
         if (url.startsWith(CockroachDriver.DRIVER_PREFIX)) {
@@ -376,11 +373,13 @@ public class JdbcDriverDemo {
                 hikariDS.addDataSourceProperty(CockroachProperty.RETRY_LISTENER_CLASSNAME.getName(),
                         EmptyRetryListener.class.getName());
             }
+
+            println(AnsiColor.BRIGHT_WHITE, "SFU: %s", sfuConnectionScope);
+            println(AnsiColor.BRIGHT_WHITE, "driverRetry: %s", driverRetry);
         } else {
             hikariDS.setTransactionIsolation("TRANSACTION_" + isolationLevel);
         }
 
-        println(AnsiColor.BOLD_BRIGHT_WHITE, "Starting JDBC driver demo");
         println(AnsiColor.BRIGHT_WHITE, "url: %s", url);
         println(AnsiColor.BRIGHT_WHITE, "username: %s", username);
         println(AnsiColor.BRIGHT_WHITE, "password: ***", password);
@@ -397,7 +396,7 @@ public class JdbcDriverDemo {
 
         JdbcDriverDemo demo = new JdbcDriverDemo();
         demo.stackTrace = stackTrace;
-        demo.retry = clientRetry;
+        demo.clientRetry = clientRetry;
         demo.sfu = sfuTransactionScope;
         demo.run(ds);
     }
