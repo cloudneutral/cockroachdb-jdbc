@@ -1,7 +1,7 @@
 # CockroachDB JDBC Driver Demo
 
-A simple high-contention workload using plain JDBC to showcase the effects 
-of driver-level retries and select-for-update vs client-level retries. 
+A simple demo app using plain JDBC to showcase the effects of driver-level retries 
+and select-for-update vs client-level retries. 
 
 To build the executable JAR, you need to enable the `demo-jar` maven profile:
 

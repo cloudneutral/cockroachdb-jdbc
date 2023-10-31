@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-import io.cockroachdb.jdbc.query.QueryProcessor;
+import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
 import io.cockroachdb.jdbc.util.WrapperSupport;
 
 /**

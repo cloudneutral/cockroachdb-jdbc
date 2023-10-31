@@ -10,9 +10,16 @@
     </parent>
 
     <artifactId>cockroachdb-jdbc-driver</artifactId>
+
     <packaging>jar</packaging>
+
     <name>CockroachDB JDBC Driver</name>
-    <description>A JDBC driver for CockroachDB wrapping pg-jdbc</description>
+
+    <description>CockroachDB JDBC Driver that wraps pgJDBC</description>
+
+    <properties>
+        <antlr.version>4.13.1</antlr.version>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -23,6 +30,12 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4-runtime</artifactId>
+            <version>${antlr.version}</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -45,4 +58,24 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.antlr</groupId>
+                <artifactId>antlr4-maven-plugin</artifactId>
+                <version>${antlr.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>antlr4</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sourceDirectory>src/main/resources</sourceDirectory>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

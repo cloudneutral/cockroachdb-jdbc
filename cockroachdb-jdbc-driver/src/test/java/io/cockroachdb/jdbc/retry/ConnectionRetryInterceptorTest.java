@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import io.cockroachdb.jdbc.ConnectionSettings;
-import io.cockroachdb.jdbc.query.QueryProcessor;
+import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
 
 @Tag("unit-test")
 public class ConnectionRetryInterceptorTest {

@@ -1,4 +1,4 @@
 /**
  * This package provides SQL query pre-processing and rewrite utilities.
  */
-package io.cockroachdb.jdbc.query;
+package io.cockroachdb.jdbc.rewrite;

@@ -1,9 +1,6 @@
-package io.cockroachdb.jdbc.query;
+package io.cockroachdb.jdbc.rewrite.sfu;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.stream.Stream;
-
+import io.cockroachdb.jdbc.VariableSource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -11,7 +8,9 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 
-import io.cockroachdb.jdbc.VariableSource;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.stream.Stream;
 
 @Tag("unit-test")
 public class SelectForUpdateProcessorTest {

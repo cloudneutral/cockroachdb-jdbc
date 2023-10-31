@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.query;
+package io.cockroachdb.jdbc.rewrite.sfu;
 
 import java.sql.Connection;
 import java.sql.SQLException;

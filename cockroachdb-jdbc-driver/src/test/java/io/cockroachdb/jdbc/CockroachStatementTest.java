@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import io.cockroachdb.jdbc.query.SelectForUpdateProcessor;
+import io.cockroachdb.jdbc.rewrite.sfu.SelectForUpdateProcessor;
 
 @Tag("unit-test")
 public class CockroachStatementTest {
