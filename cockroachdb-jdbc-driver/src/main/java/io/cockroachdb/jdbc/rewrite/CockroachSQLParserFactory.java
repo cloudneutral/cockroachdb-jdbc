@@ -1,6 +1,6 @@
 package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.rewrite.update.UpdateRewriteTreeListener;
+import io.cockroachdb.jdbc.rewrite.update.RewriteUpdateParseTreeListener;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.ANTLRErrorStrategy;
 import org.antlr.v4.runtime.CharStreams;
@@ -10,10 +10,14 @@ public abstract class CockroachSQLParserFactory {
     private CockroachSQLParserFactory() {
     }
 
-    public static void parseQuery(String query) {
+    public static String rewriteUpdateQuery(String query) {
+        StringBuilder after = new StringBuilder();
+
         CockroachSQLParser parser = createParser(query);
-        parser.addParseListener(new UpdateRewriteTreeListener());
-        parser.root();
+        parser.addParseListener(new RewriteUpdateParseTreeListener(after::append));
+        parser.updateStatement();
+
+        return after.toString();
     }
 
     private static CockroachSQLParser createParser(String expression) {

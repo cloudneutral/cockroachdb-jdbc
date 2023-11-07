@@ -4,6 +4,8 @@
  */
 grammar CockroachSQL;
 
+options { caseInsensitive = false; }
+
 // Parser rules
 
 root
@@ -12,7 +14,9 @@ root
 
 // Only support UPDATEs atm
 statement
-    : updateStatement
+    : insertStatement
+    | upsertStatement
+    | updateStatement
     ;
 
 ignore
@@ -20,8 +24,31 @@ ignore
     | COMMENT
     ;
 
+// Insert and upsert  rewrite
+
+insertStatement
+    : INSERT INTO tableName columnNames VALUES valueList (COMMA valueList)*
+    ;
+
+upsertStatement
+    : UPSERT INTO tableName columnNames VALUES valueList (COMMA valueList)*
+    ;
+
+columnNames
+    : LEFT_PAREN identifier (COMMA identifier)* RIGHT_PAREN
+    ;
+
+valueList
+    :  LEFT_PAREN atomList RIGHT_PAREN
+    ;
+
+atomList
+    : atom (COMMA atom)*;
+
+// Update rewrite
+
 updateStatement
-    : UPDATE tableId SET setClauseList whereClause
+    : UPDATE tableName SET setClauseList whereClause
     ;
 
 setClauseList
@@ -29,8 +56,7 @@ setClauseList
    ;
 
 setClause
-   : identifier EQUALS constant
-   | identifier EQUALS identifier (MINUS | PLUS)? constant
+   : identifier EQUALS atom
    ;
 
 whereClause
@@ -38,15 +64,28 @@ whereClause
     ;
 
 expression
-    : LEFT_PAREN expression RIGHT_PAREN              # parenExpression
-    | NOT expression                                 # notExpression
-    | left=constant op=compare right=expression      # compareExpression
-    | left=expression op=(AND|OR) right=expression   # binaryExpression
-    | left=constant op=('IS'|'is') NOT? right=NULL   # nullExpression
-    | constant                                       # constantExpression
+    : NOT expression                                                # notExpression
+    | left=expression comparisonOperator right=expression           # comparisonExpression
+    | expression logicalOperator expression                         # logicalExpression
+    | expression IS NOT? NULL                                       # isNullExpression
+    | LEFT_PAREN expression RIGHT_PAREN                             # nestedExpression
+    | atom                                                          # atomExpression
     ;
 
-compare
+atom
+    : literal                                                       # literalAtom
+    | identifier                                                    # identifierAtom
+    | (MINUS | PLUS)? placeholder                                   # placeholderAtom
+    | functionCall                                                  # functionCallAtom
+    ;
+
+logicalOperator
+    : AND
+    | XOR
+    | OR
+    ;
+
+comparisonOperator
     : EQUALS
     | GT
     | GE
@@ -55,48 +94,50 @@ compare
     | NE
     ;
 
-identifier
-    : IDENTIFIER DOT IDENTIFIER
-    | IDENTIFIER
-    ;
-
-parameter
-    : COLON IDENTIFIER
-    | QUESTION (INTEGER_LITERAL)?
-    ;
-
-constant
+literal
     : NULL
-    | booleanConstant
-    | identifier
-    | (MINUS | PLUS)? parameter
+    | TRUE
+    | FALSE
     | (MINUS | PLUS)? INTEGER_LITERAL
     | (MINUS | PLUS)? DECIMAL_LITERAL
     | STRING_LITERAL+
     ;
 
-booleanConstant
-    : TRUE | FALSE
+identifier
+    : IDENTIFIER DOT IDENTIFIER
+    | IDENTIFIER
     ;
 
-tableId
+placeholder
+    : QUESTION
+    ;
+
+functionCall
+    : functionName LEFT_PAREN expressionList? RIGHT_PAREN
+    ;
+
+functionName
     : name=identifier
     ;
 
+expressionList
+	:  expression (COMMA expression)*
+	;
+
+tableName
+    : name=identifier
+    ;
+
+
 // Lexer rules
 
-CREATE : 'CREATE' | 'create';
-SELECT: 'SELECT' | 'select';
-FROM: 'FROM' | 'from';
 INSERT : 'INSERT' | 'insert';
 INTO : 'INTO' | 'into';
 VALUES : 'VALUES' | 'values';
-ROWS : 'ROWS' | 'rows';
 UPDATE : 'UPDATE' | 'update';
 UPSERT : 'UPSERT' | 'upsert';
 SET : 'SET' | 'set';
 WHERE : 'WHERE' | 'where';
-DELETE : 'DELETE' | 'delete';
 NULL : 'NULL' | 'null';
 TRUE : 'TRUE' | 'true';
 FALSE : 'FALSE' | 'false';
@@ -120,7 +161,9 @@ NE: '!=';
 QUESTION: '?';
 NOT : 'NOT' | 'not' | '!';
 AND: 'AND' | 'and' | '&&';
+XOR: 'XOR' | 'xor' | '^';
 OR: 'OR' | 'or' | '||';
+IS: 'IS' | 'is';
 
 STRING_LITERAL
     : '\'' ( ~('\''|'\\') | ('\\' .) )* '\''

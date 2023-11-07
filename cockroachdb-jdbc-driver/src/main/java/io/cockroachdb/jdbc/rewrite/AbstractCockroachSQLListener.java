@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-public abstract class CockroachSQLListenerSupport extends CockroachSQLBaseListener {
+public abstract class AbstractCockroachSQLListener extends CockroachSQLBaseListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Deque<Object> stack = new ArrayDeque<>();
@@ -16,15 +16,35 @@ public abstract class CockroachSQLListenerSupport extends CockroachSQLBaseListen
         return logger;
     }
 
-    protected void push(Object o) {
+    /**
+     * Push current token to the top of stack.
+     *
+     * @param o   object to push
+     * @param ctx current rule context
+     */
+    protected void push(Object o, ParserRuleContext ctx) {
         stack.push(o);
-        logger.trace("push: {} [{}] after: {}", o, o.getClass().getSimpleName(), stack);
+
+        logger.debug("{}: push [{}] of type [{}] to stack: {}",
+                ctx.getRuleContext().getClass().getSimpleName(),
+                o, o.getClass().getSimpleName(), stack);
     }
 
-    protected <T> T pop(Class<T> type) {
+    /**
+     * Pop the top of the stack.
+     *
+     * @param type expected type
+     * @param ctx  current rule context
+     * @param <T>  generic type
+     * @return top of stack
+     */
+    protected <T> T pop(Class<T> type, ParserRuleContext ctx) {
         Object top = this.stack.pop();
+
         try {
-            logger.trace("pop: {} [{}] after: {}", top, top.getClass().getSimpleName(), stack);
+            logger.debug("{}: pop: [{}] of type [{}] from stack: {}",
+                    ctx.getRuleContext().getClass().getSimpleName(),
+                    top, top.getClass().getSimpleName(), stack);
             return type.cast(top);
         } catch (ClassCastException e) {
             throw SQLParseException.from("Cannot cast '" + top + "' of type "
@@ -34,11 +54,8 @@ public abstract class CockroachSQLListenerSupport extends CockroachSQLBaseListen
 
     @Override
     public void exitEveryRule(ParserRuleContext ctx) {
-        logRuleContext(ctx.getRuleContext().getClass().getSimpleName(), ctx);
-    }
-
-    protected void logRuleContext(String prefix, ParserRuleContext ctx) {
         if (logger.isTraceEnabled()) {
+            String prefix = ctx.getRuleContext().getClass().getSimpleName();
             logger.trace("prefix [{}] text [{}]", prefix, ctx.getText());
             for (int i = 0; i < ctx.getChildCount(); i++) {
                 logger.trace("\t[{}] {}", i, ctx.getChild(i).getText());

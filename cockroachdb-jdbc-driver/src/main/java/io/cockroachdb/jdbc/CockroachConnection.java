@@ -16,7 +16,7 @@ import io.cockroachdb.jdbc.util.WrapperSupport;
 public class CockroachConnection extends WrapperSupport<Connection> implements Connection {
     private final ConnectionSettings connectionSettings;
 
-    protected CockroachConnection(Connection delegate, ConnectionSettings connectionSettings) {
+    public CockroachConnection(Connection delegate, ConnectionSettings connectionSettings) {
         super(delegate);
         this.connectionSettings = connectionSettings;
     }
