@@ -12,13 +12,13 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-public class RewriteUpdateQueryTest {
+public class UpdateRewriteParseTreeTest {
     @Test
     public void whenUpdateWithConstantValueAndParameterBinding_expectRewrite()
             throws SQLException {
         String before = "UPDATE product SET inventory = 100, price = ? WHERE id = ?";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateQuery(before);
+        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
 
         String expected = "UPDATE product SET inventory = 100, price = dt.p1 " +
                 "FROM (SELECT " +
@@ -55,7 +55,7 @@ public class RewriteUpdateQueryTest {
     public void whenUpdateWithParameterBinding_expectRewrite() {
         String before = "UPDATE product SET inventory = ?, price = ? WHERE id = ?";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateQuery(before);
+        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
 
         String expected = "UPDATE product SET inventory = dt.p1, price = dt.p2 " +
                 "FROM (SELECT " +
@@ -74,7 +74,7 @@ public class RewriteUpdateQueryTest {
                 "last_updated_at = with_min_timestamp(?,?) " +
                 "WHERE id=? and version=?";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateQuery(before);
+        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
 
         String expected = "update product set inventory = dt.p1, price = dt.p2, version = dt.p3, " +
                 "last_updated_at = with_min_timestamp(dt.p4, dt.p5) " +
@@ -101,7 +101,7 @@ public class RewriteUpdateQueryTest {
                 "WHERE id=? and version=? " +
                 "AND (last_updated_at >= ? OR (last_updated_at IS NULL))";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateQuery(before);
+        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
 
         String expected = "update product set inventory = dt.p1, price = dt.p2, version = dt.p3, " +
                 "last_updated_at = with_min_timestamp(dt.p4, dt.p5) " +

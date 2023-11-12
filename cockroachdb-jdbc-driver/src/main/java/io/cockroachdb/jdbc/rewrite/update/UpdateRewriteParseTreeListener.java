@@ -12,12 +12,12 @@ import java.util.function.Consumer;
 /**
  * Parse tree listener for rewriting UPDATE statements to use batch arrays.
  */
-public class RewriteUpdateParseTreeListener extends AbstractCockroachSQLListener {
+public class UpdateRewriteParseTreeListener extends AbstractCockroachSQLListener {
     private final List<Pair<String, String>> setClauseList = new ArrayList<>();
 
-    private final Set<String> namedParameters = new TreeSet<>();
+    private final Set<String> placeHolders = new TreeSet<>();
 
-    private final AtomicInteger namedParameterIndex = new AtomicInteger();
+    private final AtomicInteger parameterIndex = new AtomicInteger();
 
     private String tableName;
 
@@ -29,7 +29,7 @@ public class RewriteUpdateParseTreeListener extends AbstractCockroachSQLListener
 
     private String parameterPrefix = "p";
 
-    public RewriteUpdateParseTreeListener(Consumer<String> consumer) {
+    public UpdateRewriteParseTreeListener(Consumer<String> consumer) {
         this.consumer = consumer;
     }
 
@@ -47,6 +47,10 @@ public class RewriteUpdateParseTreeListener extends AbstractCockroachSQLListener
 
     public void setParameterPrefix(String parameterPrefix) {
         this.parameterPrefix = parameterPrefix;
+    }
+
+    public boolean hasPlaceholders() {
+        return !placeHolders.isEmpty();
     }
 
     @Override
@@ -69,7 +73,7 @@ public class RewriteUpdateParseTreeListener extends AbstractCockroachSQLListener
         sb.append(" FROM (SELECT ");
 
         c = 0;
-        for (String param : namedParameters) {
+        for (String param : placeHolders) {
             if (c++ > 0) {
                 sb.append(", ");
             }
@@ -174,10 +178,10 @@ public class RewriteUpdateParseTreeListener extends AbstractCockroachSQLListener
     public void exitPlaceholder(CockroachSQLParser.PlaceholderContext ctx) {
         String id = ctx.getText();
         if (ctx.QUESTION() != null) {
-            id = parameterPrefix + namedParameterIndex.incrementAndGet();
+            id = parameterPrefix + parameterIndex.incrementAndGet();
         }
         push(fromQueryAlias + "." + id, ctx);
-        namedParameters.add(id);
+        placeHolders.add(id);
     }
 
     @Override

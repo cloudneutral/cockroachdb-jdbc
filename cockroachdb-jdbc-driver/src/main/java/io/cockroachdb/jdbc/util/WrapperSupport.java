@@ -18,8 +18,12 @@ public abstract class WrapperSupport<D> implements Wrapper {
         this.delegate = delegate;
     }
 
-    protected D getDelegate() {
+    protected D getDelegate() throws SQLException {
         return delegate;
+    }
+
+    protected void setDelegate(D delegate) {
+        this.delegate = delegate;
     }
 
     protected Logger getLogger() {

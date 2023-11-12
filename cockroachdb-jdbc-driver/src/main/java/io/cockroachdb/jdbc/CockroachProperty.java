@@ -82,7 +82,22 @@ public enum CockroachProperty {
             false,
             "Use CockroachDB JDBC connection metadata rather than PostgreSQL. The latter may cause "
                     + "incompatibility with libraries binding to PostgreSQL version details, such as Flyway.",
-            new String[] {"true", "false"});
+            new String[] {"true", "false"}),
+
+    REWRITE_BATCHED_UPDATES(
+            "reWriteBatchedUpdates",
+            Boolean.FALSE.toString(),
+            false,
+            "Enable optimization to rewrite batch UPDATE statements to use arrays.",
+            new String[] {"true", "false"}),
+
+    REWRITE_BATCHED_UPSERTS(
+            "reWriteBatchedUpserts",
+            Boolean.FALSE.toString(),
+            false,
+            "Enable optimization to rewrite batch UPSERT statements to use arrays.",
+            new String[] {"true", "false"})
+    ;
 
     private final String name;
 

@@ -9,12 +9,12 @@ import org.junit.jupiter.api.Test;
 @Tag("unit-test")
 public class WrapperSupportTest {
     interface Foo {
-        void foo();
+        void foo() throws SQLException;
     }
 
     class Bar implements Foo {
         @Override
-        public void foo() {
+        public void foo() throws SQLException {
         }
     }
 
@@ -24,7 +24,7 @@ public class WrapperSupportTest {
         }
 
         @Override
-        public void foo() {
+        public void foo() throws SQLException {
             getDelegate().foo();
         }
     }

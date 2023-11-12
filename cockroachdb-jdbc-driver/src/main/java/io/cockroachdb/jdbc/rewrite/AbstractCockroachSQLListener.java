@@ -25,9 +25,11 @@ public abstract class AbstractCockroachSQLListener extends CockroachSQLBaseListe
     protected void push(Object o, ParserRuleContext ctx) {
         stack.push(o);
 
-        logger.debug("{}: push [{}] of type [{}] to stack: {}",
-                ctx.getRuleContext().getClass().getSimpleName(),
-                o, o.getClass().getSimpleName(), stack);
+        if (logger.isTraceEnabled()) {
+            logger.trace("{}: push [{}] of type [{}] to stack: {}",
+                    ctx.getRuleContext().getClass().getSimpleName(),
+                    o, o.getClass().getSimpleName(), stack);
+        }
     }
 
     /**
@@ -42,9 +44,11 @@ public abstract class AbstractCockroachSQLListener extends CockroachSQLBaseListe
         Object top = this.stack.pop();
 
         try {
-            logger.debug("{}: pop: [{}] of type [{}] from stack: {}",
-                    ctx.getRuleContext().getClass().getSimpleName(),
-                    top, top.getClass().getSimpleName(), stack);
+            if (logger.isTraceEnabled()) {
+                logger.trace("{}: pop: [{}] of type [{}] from stack: {}",
+                        ctx.getRuleContext().getClass().getSimpleName(),
+                        top, top.getClass().getSimpleName(), stack);
+            }
             return type.cast(top);
         } catch (ClassCastException e) {
             throw SQLParseException.from("Cannot cast '" + top + "' of type "

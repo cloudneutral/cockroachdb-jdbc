@@ -14,8 +14,8 @@
 
     <logger name="org.springframework" level="INFO"/>
 
-    <logger name="io.cockroachdb.jdbc" level="INFO"/>
-    <logger name="io.cockroachdb.jdbc.SQL_TRACE" level="INFO"/>
+    <logger name="io.cockroachdb.jdbc" level="DEBUG"/>
+    <logger name="io.cockroachdb.jdbc.SQL_TRACE" level="DEBUG"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

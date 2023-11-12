@@ -55,12 +55,13 @@ public class TestConfiguration {
 
         ds.addDataSourceProperty(PGProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
         ds.addDataSourceProperty(PGProperty.APPLICATION_NAME.getName(), "CockroachDB JDBC Driver Test (non-pooled)");
-
         ds.addDataSourceProperty(CockroachProperty.IMPLICIT_SELECT_FOR_UPDATE.getName(), "false");
         ds.addDataSourceProperty(CockroachProperty.RETRY_TRANSIENT_ERRORS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.RETRY_CONNECTION_ERRORS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.RETRY_MAX_ATTEMPTS.getName(), "100"); // Set high for testing
         ds.addDataSourceProperty(CockroachProperty.RETRY_MAX_BACKOFF_TIME.getName(), "15s");
+        ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPDATES.getName(), "true");
+        ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPSERTS.getName(), "true");
 
         return ds;
     }
@@ -78,12 +79,13 @@ public class TestConfiguration {
 
         ds.addDataSourceProperty(PGProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
         ds.addDataSourceProperty(PGProperty.APPLICATION_NAME.getName(), "CockroachDB JDBC Driver Test (pooled)");
-
         ds.addDataSourceProperty(CockroachProperty.IMPLICIT_SELECT_FOR_UPDATE.getName(), "false");
         ds.addDataSourceProperty(CockroachProperty.RETRY_TRANSIENT_ERRORS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.RETRY_CONNECTION_ERRORS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.RETRY_MAX_ATTEMPTS.getName(), "100"); // Set high for testing
         ds.addDataSourceProperty(CockroachProperty.RETRY_MAX_BACKOFF_TIME.getName(), "15s");
+        ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPDATES.getName(), "true");
+        ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPSERTS.getName(), "true");
 
         return ds;
     }
@@ -92,11 +94,10 @@ public class TestConfiguration {
     @Profile("ds-pgsimple")
     @ConfigurationProperties("spring.datasource.hikari")
     public PGSimpleDataSource pgSimpleDataSource() {
-        PGSimpleDataSource ds = dataSourceProperties()
+        return dataSourceProperties()
                 .initializeDataSourceBuilder()
                 .type(PGSimpleDataSource.class)
                 .build();
-        return ds;
     }
 
     @Primary
@@ -116,7 +117,7 @@ public class TestConfiguration {
                 .create(dataSource)
                 .logQueryBySlf4j(SLF4JLogLevel.TRACE, "io.cockroachdb.jdbc.SQL_TRACE")
                 .asJson()
-//                .multiline()
+                .multiline()
                 .build();
     }
 

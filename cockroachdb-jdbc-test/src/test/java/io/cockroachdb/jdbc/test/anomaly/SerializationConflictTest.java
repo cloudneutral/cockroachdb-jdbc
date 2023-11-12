@@ -10,6 +10,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import io.cockroachdb.jdbc.util.CallableSQLOperation;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -19,18 +20,13 @@ import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 
 @Tag("anomaly-test")
 public class SerializationConflictTest extends AbstractIntegrationTest {
-    @FunctionalInterface
-    private interface SQLCallable<T> {
-        T call() throws SQLException;
-    }
-
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(8);
 
-    private <T> Future<T> executeAsync(SQLCallable<T> c) {
+    private <T> Future<T> executeAsync(CallableSQLOperation<T> c) {
         return executorService.submit(() -> c.call());
     }
 
-    private <T> Future<T> executeAsync(SQLCallable<T> c, int delaySeconds) {
+    private <T> Future<T> executeAsync(CallableSQLOperation<T> c, int delaySeconds) {
         return executorService.schedule(() -> c.call(), delaySeconds, TimeUnit.SECONDS);
     }
 

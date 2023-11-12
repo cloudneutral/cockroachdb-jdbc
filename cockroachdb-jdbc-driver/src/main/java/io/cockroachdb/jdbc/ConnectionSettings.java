@@ -14,6 +14,10 @@ import io.cockroachdb.jdbc.retry.RetryStrategy;
 public class ConnectionSettings {
     private boolean useCockroachMetadata;
 
+    private boolean rewriteBatchUpdates;
+
+    private boolean rewriteBatchUpserts;
+
     private QueryProcessor queryProcessor;
 
     private RetryStrategy retryStrategy;
@@ -21,6 +25,24 @@ public class ConnectionSettings {
     private RetryListener retryListener;
 
     private MethodTraceLogger methodTraceLogger;
+
+    public boolean isRewriteBatchUpdates() {
+        return rewriteBatchUpdates;
+    }
+
+    public ConnectionSettings setRewriteBatchUpdates(boolean rewriteBatchUpdates) {
+        this.rewriteBatchUpdates = rewriteBatchUpdates;
+        return this;
+    }
+
+    public boolean isRewriteBatchUpserts() {
+        return rewriteBatchUpserts;
+    }
+
+    public ConnectionSettings setRewriteBatchUpserts(boolean rewriteBatchUpserts) {
+        this.rewriteBatchUpserts = rewriteBatchUpserts;
+        return this;
+    }
 
     public MethodTraceLogger getMethodTraceLogger() {
         return methodTraceLogger;

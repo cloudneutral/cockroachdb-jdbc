@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
+import io.cockroachdb.jdbc.rewrite.CockroachSQLParserFactory;
 import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
 import io.cockroachdb.jdbc.util.WrapperSupport;
 
@@ -33,7 +34,15 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
         final String finalQuery = connectionSettings.getQueryProcessor().processQuery(this, sql);
-        return getDelegate().prepareStatement(finalQuery);
+
+        if (connectionSettings.isRewriteBatchUpdates()) {
+            if (CockroachSQLParserFactory.isQualifiedUpdateStatement(finalQuery)) {
+                return new CockroachPreparedBatchStatement(getDelegate(), finalQuery);
+            }
+        }
+
+        return new CockroachPreparedStatement(
+                getDelegate().prepareStatement(finalQuery));
     }
 
     @Override
@@ -74,12 +83,11 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
         checkState();
     }
 
-    private void checkState() {
+    private void checkState() throws SQLException {
         if (connectionSettings.getQueryProcessor().isTransactionScoped()) {
             // Revert transaction scoped processor to pass-through
             connectionSettings.setQueryProcessor(QueryProcessor.PASS_THROUGH);
-            logger.debug("Reverted implicit select-for-update to pass-through for connection delegate [{}]",
-                    getDelegate());
+            logger.debug("Reverted implicit select-for-update to pass-through for connection delegate [{}]", getDelegate());
         }
     }
 
@@ -263,12 +271,20 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
 
     @Override
     public void setClientInfo(String name, String value) throws SQLClientInfoException {
-        getDelegate().setClientInfo(name, value);
+        try {
+            getDelegate().setClientInfo(name, value);
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override
     public void setClientInfo(Properties properties) throws SQLClientInfoException {
-        getDelegate().setClientInfo(properties);
+        try {
+            getDelegate().setClientInfo(properties);
+        } catch (SQLException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override

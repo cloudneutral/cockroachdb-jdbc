@@ -20,7 +20,7 @@ statement
     ;
 
 ignore
-    : SEMICOLON
+    : SEMICOLON*
     | COMMENT
     ;
 
