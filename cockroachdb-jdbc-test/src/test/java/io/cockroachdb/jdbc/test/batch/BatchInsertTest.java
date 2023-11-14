@@ -48,6 +48,7 @@ public class BatchInsertTest extends AbstractIntegrationTest {
         IntStream.rangeClosed(1, PRODUCTS_PER_BATCH_COUNT).forEach(value -> {
             Product product = new Product();
             product.setId(UUID.randomUUID());
+            product.setVersion(0);
             product.setInventory(1);
             product.setPrice(BigDecimal.ONE);
             product.setSku(UUID.randomUUID().toString());
@@ -69,15 +70,18 @@ public class BatchInsertTest extends AbstractIntegrationTest {
                         PrettyText.progressBar(totalChunks, n.incrementAndGet(), batchSize + ""));
 
                 try (PreparedStatement ps = connection.prepareStatement(
-                        "INSERT INTO product (id,inventory,price,name,sku) values (?,?,?,?,?)")) {
+                        "INSERT INTO product (id,version,inventory,price,name,sku) "
+                                + "values (?,?,?,?,?,?)")) {
 
                     chunk.forEach(product -> {
                         try {
                             ps.setObject(1, product.getId());
-                            ps.setObject(2, product.getInventory());
-                            ps.setObject(3, product.getPrice());
-                            ps.setObject(4, product.getName());
-                            ps.setObject(5, product.getSku());
+                            ps.setObject(2, product.getVersion());
+                            ps.setObject(3, product.getInventory());
+                            ps.setObject(4, product.getPrice());
+                            ps.setObject(5, product.getName());
+                            ps.setObject(6, product.getSku());
+
                             ps.addBatch();
                         } catch (SQLException e) {
                             throw new RuntimeException(e);
@@ -109,6 +113,7 @@ public class BatchInsertTest extends AbstractIntegrationTest {
         IntStream.rangeClosed(1, PRODUCTS_PER_BATCH_COUNT).forEach(value -> {
             Product product = new Product();
             product.setId(UUID.randomUUID());
+            product.setVersion(0);
             product.setInventory(1);
             product.setPrice(BigDecimal.ONE);
             product.setSku(UUID.randomUUID().toString());
@@ -130,31 +135,37 @@ public class BatchInsertTest extends AbstractIntegrationTest {
                         PrettyText.progressBar(totalChunks, n.incrementAndGet(), batchSize + ""));
 
                 try (PreparedStatement ps = connection.prepareStatement(
-                        "INSERT INTO product(id,inventory,price,name,sku)"
+                        "INSERT INTO product(id,version,inventory,price,name,sku)"
                                 + " select"
                                 + "  unnest(?) as id,"
-                                + "  unnest(?) as inventory, unnest(?) as price,"
-                                + "  unnest(?) as name, unnest(?) as sku"
-                                + " ON CONFLICT (id) do nothing")) {
+                                + "  unnest(?) as version,"
+                                + "  unnest(?) as inventory,"
+                                + "  unnest(?) as price,"
+                                + "  unnest(?) as name,"
+                                + "  unnest(?) as sku"
+                                + " ON CONFLICT (id,version) do nothing")) {
                     List<Integer> qty = new ArrayList<>();
+                    List<Integer> version = new ArrayList<>();
                     List<BigDecimal> price = new ArrayList<>();
-                    List<UUID> ids = new ArrayList<>();
+                    List<UUID> id = new ArrayList<>();
                     List<String> name = new ArrayList<>();
                     List<String> sku = new ArrayList<>();
 
                     chunk.forEach(product -> {
-                        ids.add(product.getId());
+                        id.add(product.getId());
+                        version.add(product.getVersion());
                         qty.add(product.getInventory());
                         price.add(product.getPrice());
                         name.add(product.getName());
                         sku.add(product.getSku());
                     });
 
-                    ps.setArray(1, ps.getConnection().createArrayOf("UUID", ids.toArray()));
-                    ps.setArray(2, ps.getConnection().createArrayOf("BIGINT", qty.toArray()));
-                    ps.setArray(3, ps.getConnection().createArrayOf("DECIMAL", price.toArray()));
-                    ps.setArray(4, ps.getConnection().createArrayOf("VARCHAR", name.toArray()));
-                    ps.setArray(5, ps.getConnection().createArrayOf("VARCHAR", sku.toArray()));
+                    ps.setArray(1, ps.getConnection().createArrayOf("UUID", id.toArray()));
+                    ps.setArray(2, ps.getConnection().createArrayOf("INT", version.toArray()));
+                    ps.setArray(3, ps.getConnection().createArrayOf("BIGINT", qty.toArray()));
+                    ps.setArray(4, ps.getConnection().createArrayOf("DECIMAL", price.toArray()));
+                    ps.setArray(5, ps.getConnection().createArrayOf("VARCHAR", name.toArray()));
+                    ps.setArray(6, ps.getConnection().createArrayOf("VARCHAR", sku.toArray()));
 
                     ps.executeLargeUpdate();
                 } catch (SQLException e) {

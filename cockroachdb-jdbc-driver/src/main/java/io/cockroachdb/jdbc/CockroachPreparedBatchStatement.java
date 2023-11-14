@@ -104,7 +104,10 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
     private void createBatchArrayStatementDelegate() throws SQLException {
         try {
             if (logger.isDebugEnabled()) {
-                logger.debug("Creating batch array delegate:\noriginal dml: {}\narray dml: {}",
+                logger.debug("""
+                                Creating batch array delegate:
+                                Original query: {}
+                                   Array query: {}""",
                         this.query, this.batchQuery);
             }
 

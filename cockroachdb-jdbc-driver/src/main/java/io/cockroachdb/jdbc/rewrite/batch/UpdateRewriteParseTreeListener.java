@@ -25,9 +25,9 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
 
     private final Consumer<String> consumer;
 
-    private String fromQueryAlias = "__dt"; // short for datatable
+    private String fromQueryAlias = "_dt"; // short for datatable
 
-    private String parameterPrefix = "__p";
+    private String parameterPrefix = "p";
 
     public UpdateRewriteParseTreeListener(Consumer<String> consumer) {
         this.consumer = consumer;

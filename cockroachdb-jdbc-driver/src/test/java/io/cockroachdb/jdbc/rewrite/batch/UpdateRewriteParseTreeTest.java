@@ -22,12 +22,12 @@ public class UpdateRewriteParseTreeTest {
 
         String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
-        String expected = "UPDATE product SET inventory = 100, price = dt.p1 " +
+        String expected = "UPDATE product SET inventory = 100, price = _dt.p1 " +
                 "FROM (SELECT " +
                 "UNNEST(?) AS p1, " +
                 "UNNEST(?) AS p2) " +
-                "AS dt " +
-                "WHERE product.id = dt.p2";
+                "AS _dt " +
+                "WHERE product.id = _dt.p2";
 
         Assertions.assertEquals(expected.toLowerCase(), after.toLowerCase());
 
@@ -59,13 +59,13 @@ public class UpdateRewriteParseTreeTest {
 
         String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
-        String expected = "UPDATE product SET inventory = dt.p1, price = dt.p2 " +
+        String expected = "UPDATE product SET inventory = _dt.p1, price = _dt.p2 " +
                 "FROM (SELECT " +
                 "UNNEST(?) AS p1, " +
                 "UNNEST(?) AS p2, " +
                 "UNNEST(?) AS p3) " +
-                "AS dt " +
-                "WHERE product.id = dt.p3";
+                "as _dt " +
+                "WHERE product.id = _dt.p3";
 
         Assertions.assertEquals(expected.toLowerCase(), after.toLowerCase());
     }
@@ -78,8 +78,8 @@ public class UpdateRewriteParseTreeTest {
 
         String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
-        String expected = "update product set inventory = dt.p1, price = dt.p2, version = dt.p3, " +
-                "last_updated_at = with_min_timestamp(dt.p4, dt.p5) " +
+        String expected = "update product set inventory = _dt.p1, price = _dt.p2, version = _dt.p3, " +
+                "last_updated_at = with_min_timestamp(_dt.p4, _dt.p5) " +
                 "from (select " +
                 "unnest(?) as p1, " +
                 "unnest(?) as p2, " +
@@ -88,8 +88,8 @@ public class UpdateRewriteParseTreeTest {
                 "unnest(?) as p5, " +
                 "unnest(?) as p6, " +
                 "unnest(?) as p7" +
-                ") as dt " +
-                "where product.id = dt.p6 and product.version = dt.p7";
+                ") as _dt " +
+                "where product.id = _dt.p6 and product.version = _dt.p7";
 
         System.out.println(after);
 
@@ -105,8 +105,8 @@ public class UpdateRewriteParseTreeTest {
 
         String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
-        String expected = "update product set inventory = dt.p1, price = dt.p2, version = dt.p3, " +
-                "last_updated_at = with_min_timestamp(dt.p4, dt.p5) " +
+        String expected = "update product set inventory = _dt.p1, price = _dt.p2, version = _dt.p3, " +
+                "last_updated_at = with_min_timestamp(_dt.p4, _dt.p5) " +
                 "from (select " +
                 "unnest(?) as p1, " +
                 "unnest(?) as p2, " +
@@ -116,9 +116,9 @@ public class UpdateRewriteParseTreeTest {
                 "unnest(?) as p6, " +
                 "unnest(?) as p7, " +
                 "unnest(?) as p8" +
-                ") as dt " +
-                "where product.id = dt.p6 and product.version = dt.p7 " +
-                "AND (product.last_updated_at >= dt.p8 OR (product.last_updated_at IS NULL))";
+                ") as _dt " +
+                "where product.id = _dt.p6 and product.version = _dt.p7 " +
+                "AND (product.last_updated_at >= _dt.p8 OR (product.last_updated_at IS NULL))";
 
         System.out.println(after);
 

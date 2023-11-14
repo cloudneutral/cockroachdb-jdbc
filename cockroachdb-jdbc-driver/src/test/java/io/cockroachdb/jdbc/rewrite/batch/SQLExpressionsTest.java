@@ -11,9 +11,10 @@ import org.junit.jupiter.params.provider.Arguments;
 import java.util.stream.Stream;
 
 @Tag("unit-test")
-public class ExpressionsTest {
+public class SQLExpressionsTest {
     public static final Stream<Arguments> inserts = Stream.of(
             Arguments.of(true, "insert into t (a,b) values (?,?)"),
+            Arguments.of(true, "insert into t (a,b) values (?::int,?::bool)"),
             Arguments.of(true, "insert into t (a,b,c) values (?,?,foo())"),
             Arguments.of(true, "insert into t (a,b,c) values (?,?,123)"),
             Arguments.of(true, "insert into t (a,b,c) values (?,?,'abc')"),

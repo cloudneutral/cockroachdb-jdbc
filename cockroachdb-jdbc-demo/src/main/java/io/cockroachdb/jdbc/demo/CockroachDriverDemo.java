@@ -34,7 +34,7 @@ import io.cockroachdb.jdbc.util.ExceptionUtils;
 import net.ttddyy.dsproxy.listener.logging.SLF4JLogLevel;
 import net.ttddyy.dsproxy.support.ProxyDataSourceBuilder;
 
-public class JdbcDriverDemo {
+public class CockroachDriverDemo {
     private static void printf(AnsiColor color, String format, Object... args) {
         System.out.printf("%s", color.getCode());
         System.out.printf(format, args);
@@ -46,7 +46,7 @@ public class JdbcDriverDemo {
         System.out.println();
     }
 
-    private boolean stackTrace;
+    private boolean printErrors;
 
     boolean clientRetry;
 
@@ -209,7 +209,7 @@ public class JdbcDriverDemo {
                 } else {
                     rollbacks++;
                 }
-                if (stackTrace) {
+                if (printErrors) {
                     println(AnsiColor.BRIGHT_RED, "%s", throwable);
                 }
             }
@@ -235,6 +235,32 @@ public class JdbcDriverDemo {
                 ((double) total / (double) Duration.between(callTime, Instant.now()).toSeconds()));
     }
 
+    public static void usage(String message) {
+        if (!"".equals(message)) {
+            println(AnsiColor.BOLD_BRIGHT_RED, "Unrecognized option: '" + message + "'");
+        }
+        System.out.println();
+        System.out.println();
+
+        println(AnsiColor.BOLD_BRIGHT_WHITE, "Usage: java -jar cockroachdb-jdbc-demo.jar [options]");
+        println(AnsiColor.BOLD_BRIGHT_WHITE, "Options include: (defaults in parenthesis)");
+        println(AnsiColor.BRIGHT_CYAN,
+                "--url <url>               Connection URL (jdbc:cockroachdb://localhost:26257/jdbc_test)");
+        println(AnsiColor.BRIGHT_CYAN, "--user <user>             Login user name (root)");
+        println(AnsiColor.BRIGHT_CYAN, "--password <secret>       Login password (empty)");
+        println(AnsiColor.BRIGHT_CYAN,
+                "--isolation <level>       Transaction isolation level when using psql (READ_COMMITTED)");
+        println(AnsiColor.BRIGHT_CYAN, "--poolSize <N>            Connection pool size (client vCPUs x 2)");
+        println(AnsiColor.BRIGHT_CYAN,
+                "--sfu <txn|stmt>          Enable implicit SFU either at transaction level or statement level");
+        println(AnsiColor.BRIGHT_CYAN, "--retry <client|driver>   Enable transaction retries client or driver side");
+        println(AnsiColor.BRIGHT_CYAN, "--trace                   Enable SQL trace logging");
+        println(AnsiColor.BRIGHT_CYAN, "--verbose                 Verbose logging to console");
+        println(AnsiColor.BRIGHT_CYAN, "--printErrors             Print SQL rollback errors to console");
+
+        System.exit(1);
+    }
+
     public static void main(String[] args) throws Exception {
         String url = "jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable";
 
@@ -258,9 +284,7 @@ public class JdbcDriverDemo {
 
         boolean verbose = false;
 
-        boolean stackTrace = false;
-
-        boolean printHelpAndQuit = false;
+        boolean printErrors = false;
 
         LinkedList<String> argsList = new LinkedList<>(Arrays.asList(args));
         while (!argsList.isEmpty()) {
@@ -269,80 +293,55 @@ public class JdbcDriverDemo {
                 poolSize = Integer.parseInt(argsList.pop());
             } else if (arg.equals("--url")) {
                 if (argsList.isEmpty()) {
-                    println(AnsiColor.BOLD_BRIGHT_RED, "Expected URL after: " + arg);
-                    printHelpAndQuit = true;
+                    usage("Expected URL after: " + arg);
                 } else {
                     url = argsList.pop();
                 }
             } else if (arg.equals("--user")) {
                 if (argsList.isEmpty()) {
-                    println(AnsiColor.BOLD_BRIGHT_RED, "Expected username after: " + arg);
-                    printHelpAndQuit = true;
+                    usage( "Expected username after: " + arg);
                 } else {
                     username = argsList.pop();
                 }
             } else if (arg.equals("--password")) {
                 if (argsList.isEmpty()) {
-                    println(AnsiColor.BOLD_BRIGHT_RED, "Expected password after: " + arg);
-                    printHelpAndQuit = true;
+                    usage( "Expected password after: " + arg);
                 } else {
                     password = argsList.pop();
                 }
             } else if (arg.equals("--isolation")) {
                 if (argsList.isEmpty()) {
-                    println(AnsiColor.BOLD_BRIGHT_RED, "Expected isolation level name after: " + arg);
-                    printHelpAndQuit = true;
+                    usage( "Expected isolation level name after: " + arg);
                 } else {
                     isolationLevel = argsList.pop();
                 }
             } else if (arg.equals("--trace")) {
                 traceSQL = true;
             } else if (arg.startsWith("--sfu")) {
-                if ("txn".equals(argsList.peek())) {
-                    argsList.pop();
+                String mode = argsList.pop();
+                if ("txn".equals(mode)) {
                     sfuTransactionScope = true;
                 } else {
                     sfuConnectionScope = true;
                 }
             } else if (arg.startsWith("--retry")) {
-                if ("client".equals(argsList.peek())) {
-                    argsList.pop();
+                String mode = argsList.pop();
+                if ("client".equals(mode)) {
                     clientRetry = true;
                 } else {
                     driverRetry = true;
                 }
             } else if (arg.equals("--verbose")) {
                 verbose = true;
-            } else if (arg.equals("--stackTrace")) {
-                stackTrace = true;
+            } else if (arg.equals("--printErrors")) {
+                printErrors = true;
             } else if (arg.equals("--help")) {
-                printHelpAndQuit = true;
+                usage("");
             } else if (arg.startsWith("--")) {
-                println(AnsiColor.BOLD_BRIGHT_RED, "Unrecognized option: " + arg);
-                printHelpAndQuit = true;
-                break;
+                usage( "Unrecognized option: '" + arg + "'");
             } else {
-                println(AnsiColor.BOLD_BRIGHT_RED, "Unrecognized argument: " + arg);
-                printHelpAndQuit = true;
-                break;
+                usage( "Unrecognized argument: '" + arg + "'");
             }
-        }
-
-        if (printHelpAndQuit) {
-            System.out.println();
-            println(AnsiColor.BOLD_BRIGHT_WHITE, "Usage: java -jar cockroachdb-jdbc-demo.jar [options]");
-            println(AnsiColor.BOLD_BRIGHT_WHITE, "Options include: (defaults in parenthesis)");
-            println(AnsiColor.BRIGHT_CYAN, "--url <url>         Connection URL (jdbc:cockroachdb://localhost:26257/jdbc_test)");
-            println(AnsiColor.BRIGHT_CYAN, "--user <user>       Login user name (root)");
-            println(AnsiColor.BRIGHT_CYAN, "--password <secret> Login password (empty)");
-            println(AnsiColor.BRIGHT_CYAN, "--isolation <level> Transaction isolation level when using psql (READ_COMMITTED)");
-            println(AnsiColor.BRIGHT_CYAN, "--poolSize <N>      Connection pool size (client vCPUs x 2)");
-            println(AnsiColor.BRIGHT_CYAN, "--sfu [txn]         Enable implicit SFU. Optionally with transaction scope. (none)");
-            println(AnsiColor.BRIGHT_CYAN, "--retry [client]    Enable transaction retries. Optionally client-side. (none)");
-            println(AnsiColor.BRIGHT_CYAN, "--trace             Enable SQL trace logging (false)");
-            println(AnsiColor.BRIGHT_CYAN, "--verbose           Verbose logging to console (false)");
-            println(AnsiColor.BRIGHT_CYAN, "--stackTrace        Print stack traces to console (false)");
-            System.exit(1);
         }
 
         println(AnsiColor.BOLD_BRIGHT_WHITE, "Starting JDBC driver demo");
@@ -394,8 +393,8 @@ public class JdbcDriverDemo {
 
         SchemaSupport.setupSchema(ds);
 
-        JdbcDriverDemo demo = new JdbcDriverDemo();
-        demo.stackTrace = stackTrace;
+        CockroachDriverDemo demo = new CockroachDriverDemo();
+        demo.printErrors = printErrors;
         demo.clientRetry = clientRetry;
         demo.sfu = sfuTransactionScope;
         demo.run(ds);

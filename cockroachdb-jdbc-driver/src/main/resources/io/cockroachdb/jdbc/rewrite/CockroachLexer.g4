@@ -26,6 +26,7 @@ CONSTRAINT: 'CONSTRAINT';
 
 DOT: '.';
 COLON: ':';
+TYPE_CAST: '::';
 SEMICOLON: ';';
 COMMENT: '//';
 COMMA: ',';
@@ -77,11 +78,10 @@ fragment DIGIT
     ;
 
 fragment LETTER
-    : [a-zA-Z$_] ;
+    : [A-Z$_] ;
 
 fragment LETTER_OR_DIGIT
-    : [a-zA-Z0-9$_] ;
-
+    : [A-Z0-9$_] ;
 
 WS  : [ \r\n\t]+ -> skip ;
 

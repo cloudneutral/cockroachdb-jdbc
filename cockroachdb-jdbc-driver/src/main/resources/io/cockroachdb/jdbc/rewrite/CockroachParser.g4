@@ -19,7 +19,7 @@ statement
     ;
 
 ignore
-    : SEMICOLON*
+    : SEMICOLON
     | COMMENT
     ;
 
@@ -92,10 +92,10 @@ expression
     ;
 
 atom
-    : literal                                                       # literalAtom
-    | identifier                                                    # identifierAtom
-    | (MINUS | PLUS)? placeholder                                   # placeholderAtom
-    | functionCall                                                  # functionCallAtom
+    : literal (TYPE_CAST identifier)?                               # literalAtom
+    | identifier  (TYPE_CAST identifier)?                           # identifierAtom
+    | (MINUS | PLUS)? placeholder (TYPE_CAST identifier)?           # placeholderAtom
+    | functionCall   (TYPE_CAST identifier)?                        # functionCallAtom
     ;
 
 logicalOperator

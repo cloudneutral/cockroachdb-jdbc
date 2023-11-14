@@ -15,7 +15,7 @@ public abstract class SchemaSupport {
     }
 
     public static void setupSchema(DataSource ds) throws Exception {
-        InputStream is = JdbcDriverDemo.class.getResourceAsStream(DB_CREATE_SQL);
+        InputStream is = CockroachDriverDemo.class.getResourceAsStream(DB_CREATE_SQL);
         if (is == null) {
             throw new IOException("SQL file not found: " + DB_CREATE_SQL);
         }
