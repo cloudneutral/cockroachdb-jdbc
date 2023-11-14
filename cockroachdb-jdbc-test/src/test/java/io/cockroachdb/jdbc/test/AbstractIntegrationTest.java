@@ -25,7 +25,7 @@ import jakarta.annotation.PostConstruct;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@SpringBootTest(classes = TestConfiguration.class)
+@SpringBootTest(classes = IntegrationTestConfiguration.class)
 public abstract class AbstractIntegrationTest {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 

@@ -24,8 +24,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 import io.cockroachdb.jdbc.test.DatabaseFixture;
-import io.cockroachdb.jdbc.test.util.JdbcHelper;
-import io.cockroachdb.jdbc.test.util.PrettyText;
+import io.cockroachdb.jdbc.test.JdbcHelper;
+import io.cockroachdb.jdbc.test.PrettyText;
 
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 @Order(2)
@@ -51,7 +51,7 @@ public class BatchUpdateTest extends AbstractIntegrationTest {
     @ParameterizedTest
     @ValueSource(ints = {
             1 << 4, 1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10})
-    public void whenUpdateProductsUsingBatches_thenObserveBulkUpdates(int batchSize) throws Exception {
+    public void whenUpdateUsingBatches_thenObserveSingletons(int batchSize) throws Exception {
         Assertions.assertFalse(TransactionSynchronizationManager.isActualTransactionActive(), "TX active");
 
         List<Product> products = findAll(PRODUCTS_PER_BATCH_COUNT);
@@ -106,7 +106,7 @@ public class BatchUpdateTest extends AbstractIntegrationTest {
     @ParameterizedTest
     @ValueSource(ints = {
             1 << 4, 1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10})
-    public void whenUpdateProductsUsingArrays_thenObserveBulkUpdates(int batchSize) throws Exception {
+    public void whenUpdateUsingArrays_thenObserveBatches(int batchSize) throws Exception {
         Assertions.assertFalse(TransactionSynchronizationManager.isActualTransactionActive(), "TX active");
 
         List<Product> products = findAll(PRODUCTS_PER_BATCH_COUNT);

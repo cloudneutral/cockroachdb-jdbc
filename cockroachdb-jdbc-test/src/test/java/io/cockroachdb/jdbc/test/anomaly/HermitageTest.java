@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Timeout;
 
 import io.cockroachdb.jdbc.CockroachConnection;
 import io.cockroachdb.jdbc.test.DatabaseFixture;
-import io.cockroachdb.jdbc.test.util.JdbcHelper;
+import io.cockroachdb.jdbc.test.JdbcHelper;
 import io.cockroachdb.jdbc.retry.ConcurrentUpdateException;
 
 /**

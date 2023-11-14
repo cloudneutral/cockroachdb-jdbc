@@ -84,11 +84,11 @@ public enum CockroachProperty {
                     + "incompatibility with libraries binding to PostgreSQL version details, such as Flyway.",
             new String[] {"true", "false"}),
 
-    REWRITE_BATCHED_UPDATES(
-            "reWriteBatchedUpdates",
+    REWRITE_BATCHED_INSERTS(
+            "reWriteBatchedInserts",
             Boolean.FALSE.toString(),
             false,
-            "Enable optimization to rewrite batch UPDATE statements to use arrays.",
+            "Enable optimization to rewrite batch INSERT statements to use arrays.",
             new String[] {"true", "false"}),
 
     REWRITE_BATCHED_UPSERTS(
@@ -96,6 +96,13 @@ public enum CockroachProperty {
             Boolean.FALSE.toString(),
             false,
             "Enable optimization to rewrite batch UPSERT statements to use arrays.",
+            new String[] {"true", "false"}),
+
+    REWRITE_BATCHED_UPDATES(
+            "reWriteBatchedUpdates",
+            Boolean.FALSE.toString(),
+            false,
+            "Enable optimization to rewrite batch UPDATE statements to use arrays.",
             new String[] {"true", "false"})
     ;
 

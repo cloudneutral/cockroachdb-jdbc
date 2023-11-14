@@ -24,8 +24,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 import io.cockroachdb.jdbc.test.DatabaseFixture;
-import io.cockroachdb.jdbc.test.util.JdbcHelper;
-import io.cockroachdb.jdbc.test.util.PrettyText;
+import io.cockroachdb.jdbc.test.JdbcHelper;
+import io.cockroachdb.jdbc.test.PrettyText;
 import io.cockroachdb.jdbc.util.DurationFormat;
 
 @Order(1)

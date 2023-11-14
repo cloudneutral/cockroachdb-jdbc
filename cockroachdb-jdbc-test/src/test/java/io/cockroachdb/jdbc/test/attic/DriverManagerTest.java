@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test;
+package io.cockroachdb.jdbc.test.attic;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;

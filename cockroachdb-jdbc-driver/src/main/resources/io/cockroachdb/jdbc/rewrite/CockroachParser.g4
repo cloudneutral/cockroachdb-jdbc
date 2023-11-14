@@ -1,10 +1,10 @@
 /*
-    Simplified ANLTR4 grammar for CockroachDB UPDATE DML statements for the
+    Simplified ANLTR4 grammar for CockroachDB DML statements for the
     purpose of batch array rewrites.
  */
-grammar CockroachSQL;
+parser grammar CockroachParser;
 
-options { caseInsensitive = false; }
+options { tokenVocab = CockroachLexer; }
 
 // Parser rules
 
@@ -12,7 +12,6 @@ root
   : statement ignore? EOF
   ;
 
-// Only support UPDATEs atm
 statement
     : insertStatement
     | upsertStatement
@@ -24,18 +23,37 @@ ignore
     | COMMENT
     ;
 
-// Insert and upsert  rewrite
+//
+// Insert
+//
 
 insertStatement
     : INSERT INTO tableName columnNames VALUES valueList (COMMA valueList)*
+    (optionalOnConflict)?
     ;
 
+optionalOnConflict
+   : ON CONFLICT optionalConflictExpression DO NOTHING
+   ;
+
+optionalConflictExpression
+    : LEFT_PAREN columnName (COMMA columnName)* RIGHT_PAREN
+    | ON CONSTRAINT columnName
+    ;
+
+//
+// Upsert
+//
 upsertStatement
     : UPSERT INTO tableName columnNames VALUES valueList (COMMA valueList)*
     ;
 
 columnNames
-    : LEFT_PAREN identifier (COMMA identifier)* RIGHT_PAREN
+    : LEFT_PAREN columnName (COMMA columnName)* RIGHT_PAREN
+    ;
+
+columnName
+    : identifier
     ;
 
 valueList
@@ -45,8 +63,9 @@ valueList
 atomList
     : atom (COMMA atom)*;
 
-// Update rewrite
-
+//
+// Update
+//
 updateStatement
     : UPDATE tableName SET setClauseList whereClause
     ;
@@ -127,79 +146,3 @@ expressionList
 tableName
     : name=identifier
     ;
-
-
-// Lexer rules
-
-INSERT : 'INSERT' | 'insert';
-INTO : 'INTO' | 'into';
-VALUES : 'VALUES' | 'values';
-UPDATE : 'UPDATE' | 'update';
-UPSERT : 'UPSERT' | 'upsert';
-SET : 'SET' | 'set';
-WHERE : 'WHERE' | 'where';
-NULL : 'NULL' | 'null';
-TRUE : 'TRUE' | 'true';
-FALSE : 'FALSE' | 'false';
-
-DOT: '.';
-COLON: ':';
-SEMICOLON: ';';
-COMMENT: '//';
-COMMA: ',';
-ASTERISK: '*';
-LEFT_PAREN: '(';
-RIGHT_PAREN: ')';
-EQUALS: '=';
-MINUS : '-';
-PLUS: '+';
-GT: '>';
-GE: '>=';
-LT: '<';
-LE: '<=';
-NE: '!=';
-QUESTION: '?';
-NOT : 'NOT' | 'not' | '!';
-AND: 'AND' | 'and' | '&&';
-XOR: 'XOR' | 'xor' | '^';
-OR: 'OR' | 'or' | '||';
-IS: 'IS' | 'is';
-
-STRING_LITERAL
-    : '\'' ( ~('\''|'\\') | ('\\' .) )* '\''
-    | '"' ( ~('"'|'\\') | ('\\' .) )* '"'
-    ;
-
-INTEGER_LITERAL
-    : DIGIT+
-    ;
-
-DECIMAL_LITERAL
-    : DECIMAL_DIGITS
-    ;
-
-IDENTIFIER
-    : LETTER LETTER_OR_DIGIT*
-    ;
-
-fragment SIGN
-    : [+-]
-    ;
-
-fragment DECIMAL_DIGITS
-    : SIGN? DIGIT+ ('.' DIGIT+)?
-    ;
-
-fragment DIGIT
-    : [0-9]
-    ;
-
-fragment LETTER
-    : [a-zA-Z$_] ;
-
-fragment LETTER_OR_DIGIT
-    : [a-zA-Z0-9$_] ;
-
-
-WS  : [ \r\n\t]+ -> skip ;
-

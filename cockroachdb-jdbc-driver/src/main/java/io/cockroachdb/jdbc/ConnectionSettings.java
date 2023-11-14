@@ -18,6 +18,8 @@ public class ConnectionSettings {
 
     private boolean rewriteBatchUpserts;
 
+    private boolean rewriteBatchInserts;
+
     private QueryProcessor queryProcessor;
 
     private RetryStrategy retryStrategy;
@@ -41,6 +43,15 @@ public class ConnectionSettings {
 
     public ConnectionSettings setRewriteBatchUpserts(boolean rewriteBatchUpserts) {
         this.rewriteBatchUpserts = rewriteBatchUpserts;
+        return this;
+    }
+
+    public boolean isRewriteBatchInserts() {
+        return rewriteBatchInserts;
+    }
+
+    public ConnectionSettings setRewriteBatchInserts(boolean rewriteBatchInserts) {
+        this.rewriteBatchInserts = rewriteBatchInserts;
         return this;
     }
 

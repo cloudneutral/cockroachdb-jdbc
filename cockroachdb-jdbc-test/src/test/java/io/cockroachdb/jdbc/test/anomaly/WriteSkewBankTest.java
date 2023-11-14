@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 import io.cockroachdb.jdbc.CockroachConnection;
 import io.cockroachdb.jdbc.test.DatabaseFixture;
-import io.cockroachdb.jdbc.test.util.PrettyText;
+import io.cockroachdb.jdbc.test.PrettyText;
 import io.cockroachdb.jdbc.retry.LoggingRetryListener;
 
 @DatabaseFixture(beforeTestScript = "db/anomaly/bank-ddl.sql")

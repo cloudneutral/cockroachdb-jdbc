@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test.util;
+package io.cockroachdb.jdbc.test;
 
 import java.util.Locale;
 

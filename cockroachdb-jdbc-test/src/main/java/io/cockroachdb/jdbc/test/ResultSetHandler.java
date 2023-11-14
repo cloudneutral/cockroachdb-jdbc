@@ -1,9 +1,9 @@
-package io.cockroachdb.jdbc.test.util;
+package io.cockroachdb.jdbc.test;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 @FunctionalInterface
 public interface ResultSetHandler {
-    void process(ResultSet rs) throws SQLException;
+    void handle(ResultSet rs) throws SQLException;
 }

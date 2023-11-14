@@ -1,7 +1,6 @@
 package io.cockroachdb.jdbc;
 
 import io.cockroachdb.jdbc.retry.PreparedStatementRetryInterceptor;
-import io.cockroachdb.jdbc.rewrite.CockroachSQLParserFactory;
 import io.cockroachdb.jdbc.util.CallableSQLOperation;
 import io.cockroachdb.jdbc.util.Pair;
 import io.cockroachdb.jdbc.util.WrapperSupport;
@@ -17,23 +16,39 @@ import java.util.*;
 
 /**
  * A {@code java.sql.PreparedStatement} implementation for CockroachDB, wrapping an underlying PgStatement
- * or proxy. Depending on API usage, in particular for batch statements, may perform rewrites of
- * UPDATE / INSERT / UPSERT queries to use arrays. This is done by deferring all calls to the delegate
- * until an execution method is used or addBatch, at which point its known what type of statement it is.
+ * or proxy.
+ * <p>
+ * Depending on API usage and driver configuration, it may rewrite batch UPDATE / INSERT and UPSERT DML statements
+ * to use SQL arrays. This is achieved by deferring the creation of the prepared statement delegate along with
+ * most primitive (non-streaming) method calls to that delegate. When the executeBatch method is invoked and
+ * the deferral is still active, it creates a rewritten DML prepared statement and binds array values to
+ * that statement instead.
+ * <p>
+ * The pgJDBC has a hard batch size limit of 128 for rewriting INSERT statements. It doesn't rewrite UPSERTs
+ * or UPDATES. Using this approach removes these limitations.
  */
 public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStatement> implements PreparedStatement {
     static PreparedStatement emptyProxyDelegate() {
         return (PreparedStatement) Proxy.newProxyInstance(
-                PreparedStatementRetryInterceptor.class.getClassLoader(),
+                CockroachPreparedBatchStatement.class.getClassLoader(),
                 new Class[]{PreparedStatement.class},
                 (proxy, method, args) -> {
-                    throw new UnsupportedOperationException();
+                    if ("toString".equals(method.getName())
+                            || "isWrapperFor".equals(method.getName())
+                            || "unwrap".equals(method.getName())
+                            || "hashCode".equals(method.getName())) {
+                        return null;
+                    }
+                    throw new UnsupportedOperationException("Not supposed to happen! " +
+                            "Please file a bug report:\nhttps://github.com/kai-niemi/cockroachdb-jdbc/issues");
                 });
     }
 
     private final Connection connection;
 
     private final String query;
+
+    private final String batchQuery;
 
     private final List<ParameterRecord> parameterRecords = new ArrayList<>(64);
 
@@ -45,11 +60,12 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         Object value;
     }
 
-    public CockroachPreparedBatchStatement(Connection connection, String query) {
+    public CockroachPreparedBatchStatement(Connection connection, String query, String batchQuery) {
         super(emptyProxyDelegate());
 
         this.connection = connection;
         this.query = query;
+        this.batchQuery = batchQuery;
     }
 
     private void addRowSetter(int parameterIndex, CallableSQLOperation<?> operation, int sqlType, Object value)
@@ -62,10 +78,21 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         if (isBatchRewriteVoided()) {
             throw new IllegalStateException();
         }
+
         ParameterRecord record = new ParameterRecord();
         record.operation = operation;
         record.sqlType = sqlType;
         record.value = value;
+
+        // Attempt qualification
+        if ("OTHER".equals(sqlType)) {
+            try {
+                record.value = UUID.fromString(String.valueOf(value));
+                record.sqlType = "UUID";
+            } catch (IllegalArgumentException e) {
+                // something else
+            }
+        }
 
         if (parameterRecords.size() < parameterIndex) {
             parameterRecords.add(record);
@@ -74,33 +101,86 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         }
     }
 
+    private void createBatchArrayStatementDelegate() throws SQLException {
+        try {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Creating batch array delegate:\noriginal dml: {}\narray dml: {}",
+                        this.query, this.batchQuery);
+            }
+
+            final PreparedStatement preparedStatement = connection.prepareStatement(this.batchQuery);
+
+            int index = 1;
+            int columnSize = 0;
+
+            for (Pair<String, List<Object>> pair : columnValues) {
+                String type = pair.getFirst();
+                List<Object> values = pair.getSecond();
+
+                if (columnSize > 0 && columnSize != values.size()) {
+                    throw new IllegalStateException("Inconsistent column size for column index "
+                            + index + " (" + type + "). Expected " + columnSize + " but was " + values.size());
+                }
+                columnSize = values.size();
+
+                Array array = preparedStatement.getConnection().createArrayOf(type, values.toArray());
+
+                if (logger.isTraceEnabled()) {
+                    logger.trace("Created array of type '{}' ({}) for column index {} with {} values",
+                            array.getBaseTypeName(),
+                            array.getBaseType(),
+                            index,
+                            values.size());
+                }
+
+                preparedStatement.setArray(index++, array);
+            }
+
+            setDelegate(preparedStatement);
+        } finally {
+            columnValues.clear();
+        }
+    }
+
     private boolean isBatchRewriteVoided() throws SQLException {
         return !Proxy.isProxyClass(super.getDelegate().getClass());
     }
 
+    private PreparedStatement getDelegate(String source) throws SQLException {
+        if (Proxy.isProxyClass(super.getDelegate().getClass())) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Invalidating batch rewrite due to '{}' and replaying {} recorded ops",
+                        source, parameterRecords.size());
+            }
+        }
+        return getDelegate();
+    }
+
     @Override
-    protected PreparedStatement getDelegate() throws SQLException {
+    protected final PreparedStatement getDelegate() throws SQLException {
         if (Proxy.isProxyClass(super.getDelegate().getClass())) {
             setDelegate(connection.prepareStatement(this.query));
 
             // Invoke all deferred setXX calls
-            for (ParameterRecord record : parameterRecords) {
-                record.operation.call();
+            try {
+                for (ParameterRecord record : parameterRecords) {
+                    record.operation.call();
+                }
+            } finally {
+                parameterRecords.clear();
             }
-
-            parameterRecords.clear();
         }
         return super.getDelegate();
     }
 
     @Override
     public ResultSet executeQuery() throws SQLException {
-        return new CockroachResultSet(getDelegate().executeQuery());
+        return new CockroachResultSet(getDelegate("executeQuery()").executeQuery());
     }
 
     @Override
     public int executeUpdate() throws SQLException {
-        return getDelegate().executeUpdate();
+        return getDelegate("executeUpdate()").executeUpdate();
     }
 
     @Override
@@ -111,7 +191,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             addRowSetter(parameterIndex, () -> {
                 getDelegate().setNull(parameterIndex, sqlType);
                 return null;
-            }, Types.NULL, null);
+            }, sqlType, null);
         }
     }
 
@@ -274,23 +354,24 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        getDelegate().setAsciiStream(parameterIndex, x, length);
+        getDelegate("setAsciiStream(parameterIndex,x,length)").setAsciiStream(parameterIndex, x, length);
     }
 
     @SuppressWarnings("deprecation")
     @Override
     public void setUnicodeStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        getDelegate().setUnicodeStream(parameterIndex, x, length);
+        getDelegate("setUnicodeStream(parameterIndex,x,length)").setUnicodeStream(parameterIndex, x, length);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, int length) throws SQLException {
-        getDelegate().setBinaryStream(parameterIndex, x, length);
+        getDelegate("setBinaryStream(parameterIndex,x,length)").setBinaryStream(parameterIndex, x, length);
     }
 
     @Override
     public void clearParameters() throws SQLException {
         parameterRecords.clear();
+
         if (isBatchRewriteVoided()) {
             getDelegate().clearParameters();
         }
@@ -316,7 +397,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         }
 
         if (x == null) {
-            setNull(parameterIndex, Types.OTHER);
+            setNull(parameterIndex, Types.NULL);
         } else if (x instanceof UUID) {
             addRowSetter(parameterIndex, () -> {
                 getDelegate().setObject(parameterIndex, x);
@@ -364,13 +445,13 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
                 return null;
             }, "DECIMAL", (Number) x);
         } else {
-            getDelegate().setObject(parameterIndex, x);
+            getDelegate("setObject(parameterIndex,x)").setObject(parameterIndex, x);
         }
     }
 
     @Override
     public boolean execute() throws SQLException {
-        return getDelegate().execute();
+        return getDelegate("execute()").execute();
     }
 
     @Override
@@ -398,7 +479,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, int length) throws SQLException {
-        getDelegate().setCharacterStream(parameterIndex, reader, length);
+        getDelegate("setCharacterStream(parameterIndex,reader,length)").setCharacterStream(parameterIndex, reader, length);
     }
 
     @Override
@@ -451,27 +532,27 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
-        return getDelegate().getMetaData();
+        return getDelegate("getMetaData()").getMetaData();
     }
 
     @Override
     public void setDate(int parameterIndex, Date x, Calendar cal) throws SQLException {
-        getDelegate().setDate(parameterIndex, x, cal);
+        getDelegate("setDate(parameterIndex,x,cal)").setDate(parameterIndex, x, cal);
     }
 
     @Override
     public void setTime(int parameterIndex, Time x, Calendar cal) throws SQLException {
-        getDelegate().setTime(parameterIndex, x, cal);
+        getDelegate("setTime(parameterIndex,x,cal)").setTime(parameterIndex, x, cal);
     }
 
     @Override
     public void setTimestamp(int parameterIndex, Timestamp x, Calendar cal) throws SQLException {
-        getDelegate().setTimestamp(parameterIndex, x, cal);
+        getDelegate("setTimestamp(parameterIndex,x,cal)").setTimestamp(parameterIndex, x, cal);
     }
 
     @Override
     public void setNull(int parameterIndex, int sqlType, String typeName) throws SQLException {
-        getDelegate().setNull(parameterIndex, sqlType, typeName);
+        getDelegate("setNull(parameterIndex,sqlType,typeName").setNull(parameterIndex, sqlType, typeName);
     }
 
     @Override
@@ -488,7 +569,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public ParameterMetaData getParameterMetaData() throws SQLException {
-        return getDelegate().getParameterMetaData();
+        return getDelegate("getParameterMetaData()").getParameterMetaData();
     }
 
     @Override
@@ -517,7 +598,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value, long length) throws SQLException {
-        getDelegate().setNCharacterStream(parameterIndex, value, length);
+        getDelegate("setNCharacterStream(parameterIndex,value,length)").setNCharacterStream(parameterIndex, value, length);
     }
 
     @Override
@@ -534,17 +615,17 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        getDelegate().setClob(parameterIndex, reader, length);
+        getDelegate("setClob(parameterIndex,reader,length)").setClob(parameterIndex, reader, length);
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream, long length) throws SQLException {
-        getDelegate().setBlob(parameterIndex, inputStream, length);
+        getDelegate("setBlob(parameterIndex,inputStream,length)").setBlob(parameterIndex, inputStream, length);
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader, long length) throws SQLException {
-        getDelegate().setNClob(parameterIndex, reader, length);
+        getDelegate("setNClob(parameterIndex,reader,length)").setNClob(parameterIndex, reader, length);
     }
 
     @Override
@@ -561,57 +642,57 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
-        getDelegate().setObject(parameterIndex, x, targetSqlType, scaleOrLength);
+        getDelegate("setObject(parameterIndex,x,targetSqlType,scaleOrLength)").setObject(parameterIndex, x, targetSqlType, scaleOrLength);
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        getDelegate().setAsciiStream(parameterIndex, x, length);
+        getDelegate("setAsciiStream(parameterIndex,x,length)").setAsciiStream(parameterIndex, x, length);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x, long length) throws SQLException {
-        getDelegate().setBinaryStream(parameterIndex, x, length);
+        getDelegate("setBinaryStream(parameterIndex,x,length)").setBinaryStream(parameterIndex, x, length);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader, long length) throws SQLException {
-        getDelegate().setCharacterStream(parameterIndex, reader, length);
+        getDelegate("setCharacterStream(parameterIndex,reader,length)").setCharacterStream(parameterIndex, reader, length);
     }
 
     @Override
     public void setAsciiStream(int parameterIndex, InputStream x) throws SQLException {
-        getDelegate().setAsciiStream(parameterIndex, x);
+        getDelegate("setAsciiStream(parameterIndex,x)").setAsciiStream(parameterIndex, x);
     }
 
     @Override
     public void setBinaryStream(int parameterIndex, InputStream x) throws SQLException {
-        getDelegate().setBinaryStream(parameterIndex, x);
+        getDelegate("setBinaryStream(parameterIndex,x)").setBinaryStream(parameterIndex, x);
     }
 
     @Override
     public void setCharacterStream(int parameterIndex, Reader reader) throws SQLException {
-        getDelegate().setCharacterStream(parameterIndex, reader);
+        getDelegate("setCharacterStream(parameterIndex,reader)").setCharacterStream(parameterIndex, reader);
     }
 
     @Override
     public void setNCharacterStream(int parameterIndex, Reader value) throws SQLException {
-        getDelegate().setNCharacterStream(parameterIndex, value);
+        getDelegate("setNCharacterStream(parameterIndex,value)").setNCharacterStream(parameterIndex, value);
     }
 
     @Override
     public void setClob(int parameterIndex, Reader reader) throws SQLException {
-        getDelegate().setClob(parameterIndex, reader);
+        getDelegate("setClob(parameterIndex,reader)").setClob(parameterIndex, reader);
     }
 
     @Override
     public void setBlob(int parameterIndex, InputStream inputStream) throws SQLException {
-        getDelegate().setBlob(parameterIndex, inputStream);
+        getDelegate("setBlob(parameterIndex,inputStream)").setBlob(parameterIndex, inputStream);
     }
 
     @Override
     public void setNClob(int parameterIndex, Reader reader) throws SQLException {
-        getDelegate().setNClob(parameterIndex, reader);
+        getDelegate("setNClob(parameterIndex, reader)").setNClob(parameterIndex, reader);
     }
 
     @Override
@@ -626,62 +707,62 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void close() throws SQLException {
-        getDelegate().close();
+        getDelegate("close()").close();
     }
 
     @Override
     public int getMaxFieldSize() throws SQLException {
-        return getDelegate().getMaxFieldSize();
+        return getDelegate("getMaxFieldSize()").getMaxFieldSize();
     }
 
     @Override
     public void setMaxFieldSize(int max) throws SQLException {
-        getDelegate().setMaxFieldSize(max);
+        getDelegate("setMaxFieldSize(max)").setMaxFieldSize(max);
     }
 
     @Override
     public int getMaxRows() throws SQLException {
-        return getDelegate().getMaxRows();
+        return getDelegate("getMaxRows()").getMaxRows();
     }
 
     @Override
     public void setMaxRows(int max) throws SQLException {
-        getDelegate().setMaxRows(max);
+        getDelegate("setMaxRows(max)").setMaxRows(max);
     }
 
     @Override
     public void setEscapeProcessing(boolean enable) throws SQLException {
-        getDelegate().setEscapeProcessing(enable);
+        getDelegate("setEscapeProcessing(enable)").setEscapeProcessing(enable);
     }
 
     @Override
     public int getQueryTimeout() throws SQLException {
-        return getDelegate().getQueryTimeout();
+        return getDelegate("getQueryTimeout()").getQueryTimeout();
     }
 
     @Override
     public void setQueryTimeout(int seconds) throws SQLException {
-        getDelegate().setQueryTimeout(seconds);
+        getDelegate("setQueryTimeout(seconds)").setQueryTimeout(seconds);
     }
 
     @Override
     public void cancel() throws SQLException {
-        getDelegate().cancel();
+        getDelegate("cancel()").cancel();
     }
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return getDelegate().getWarnings();
+        return getDelegate("getWarnings()").getWarnings();
     }
 
     @Override
     public void clearWarnings() throws SQLException {
-        getDelegate().clearWarnings();
+        getDelegate("clearWarnings()").clearWarnings();
     }
 
     @Override
     public void setCursorName(String name) throws SQLException {
-        getDelegate().setCursorName(name);
+        getDelegate("setCursorName(name)").setCursorName(name);
     }
 
     @Override
@@ -691,48 +772,48 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public ResultSet getResultSet() throws SQLException {
-        ResultSet resultSet = getDelegate().getResultSet();
+        ResultSet resultSet = getDelegate("getResultSet").getResultSet();
         return resultSet != null ? new CockroachResultSet(getDelegate().executeQuery()) : null;
     }
 
     @Override
     public int getUpdateCount() throws SQLException {
-        return getDelegate().getUpdateCount();
+        return getDelegate("getUpdateCount()").getUpdateCount();
     }
 
     @Override
     public boolean getMoreResults() throws SQLException {
-        return getDelegate().getMoreResults();
+        return getDelegate("getMoreResults()").getMoreResults();
     }
 
     @Override
     public void setFetchDirection(int direction) throws SQLException {
-        getDelegate().setFetchDirection(direction);
+        getDelegate("setFetchDirection(direction)").setFetchDirection(direction);
     }
 
     @Override
     public int getFetchDirection() throws SQLException {
-        return getDelegate().getFetchDirection();
+        return getDelegate("getFetchDirection()").getFetchDirection();
     }
 
     @Override
     public void setFetchSize(int rows) throws SQLException {
-        getDelegate().setFetchSize(rows);
+        getDelegate("setFetchSize(rows)").setFetchSize(rows);
     }
 
     @Override
     public int getFetchSize() throws SQLException {
-        return getDelegate().getFetchSize();
+        return getDelegate("getFetchSize()").getFetchSize();
     }
 
     @Override
     public int getResultSetConcurrency() throws SQLException {
-        return getDelegate().getResultSetConcurrency();
+        return getDelegate("getResultSetConcurrency()").getResultSetConcurrency();
     }
 
     @Override
     public int getResultSetType() throws SQLException {
-        return getDelegate().getResultSetType();
+        return getDelegate("getResultSetType()").getResultSetType();
     }
 
     @Override
@@ -742,7 +823,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void clearBatch() throws SQLException {
-        getDelegate().clearBatch();
+        getDelegate("clearBatch()").clearBatch();
     }
 
     @Override
@@ -751,39 +832,13 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             return getDelegate().executeBatch();
         }
 
-        try {
-            final String sql = CockroachSQLParserFactory.rewriteUpdateStatement(this.query);
-            if (logger.isTraceEnabled()) {
-                logger.trace("Rewriting SQL before executeBatch():\noriginal: {}\nnew: {}", this.query, sql);
-            }
+        createBatchArrayStatementDelegate();
 
-            // Replace delegate
-            setDelegate(connection.prepareStatement(sql));
+        int rowCount = getDelegate().executeUpdate();
 
-            int index = 1;
-            for (Pair<String, List<Object>> pair : columnValues) {
-                String type = pair.getFirst();
-                List<Object> values = pair.getSecond();
-
-                if (logger.isTraceEnabled()) {
-                    logger.trace("Create array of type {} for column index {} with {} values",
-                            type, index, values.size());
-                }
-
-                Array array = getDelegate().getConnection().createArrayOf(type, values.toArray());
-
-                getDelegate().setArray(index++, array);
-            }
-
-            // Replace executeBatch
-            int rowCount = getDelegate().executeUpdate();
-
-            int[] rv = new int[columnValues.size()];
-            Arrays.fill(rv, rowCount == columnValues.size() ? SUCCESS_NO_INFO : EXECUTE_FAILED);
-            return rv;
-        } finally {
-            columnValues.clear();
-        }
+        int[] rv = new int[rowCount];
+        Arrays.fill(rv, SUCCESS_NO_INFO);
+        return rv;
     }
 
     @Override
@@ -796,12 +851,12 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public boolean getMoreResults(int current) throws SQLException {
-        return getDelegate().getMoreResults(current);
+        return getDelegate("getMoreResults(current)").getMoreResults(current);
     }
 
     @Override
     public ResultSet getGeneratedKeys() throws SQLException {
-        return new CockroachResultSet(getDelegate().getGeneratedKeys());
+        return new CockroachResultSet(getDelegate("getGeneratedKeys()").getGeneratedKeys());
     }
 
     @Override
@@ -836,67 +891,78 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public int getResultSetHoldability() throws SQLException {
-        return getDelegate().getResultSetHoldability();
+        return getDelegate("getResultSetHoldability()").getResultSetHoldability();
     }
 
     @Override
     public boolean isClosed() throws SQLException {
-        return getDelegate().isClosed();
+        return getDelegate("isClosed()").isClosed();
     }
 
     @Override
     public void setPoolable(boolean poolable) throws SQLException {
-        getDelegate().setPoolable(poolable);
+        getDelegate("setPoolable(poolable)").setPoolable(poolable);
     }
 
     @Override
     public boolean isPoolable() throws SQLException {
-        return getDelegate().isPoolable();
+        return getDelegate("isPoolable()").isPoolable();
     }
 
     @Override
     public void closeOnCompletion() throws SQLException {
-        getDelegate().closeOnCompletion();
+        getDelegate("closeOnCompletion()").closeOnCompletion();
     }
 
     @Override
     public boolean isCloseOnCompletion() throws SQLException {
-        return getDelegate().isCloseOnCompletion();
+        return getDelegate("isCloseOnCompletion()").isCloseOnCompletion();
     }
 
     @Override
     public void setObject(int parameterIndex, Object x, SQLType targetSqlType, int scaleOrLength) throws SQLException {
-        getDelegate().setObject(parameterIndex, x, targetSqlType, scaleOrLength);
+        getDelegate("setObject(parameterIndex,x,targetSqlType,scaleOrLength)")
+                .setObject(parameterIndex, x, targetSqlType, scaleOrLength);
     }
 
     @Override
     public void setObject(int parameterIndex, Object x, SQLType targetSqlType) throws SQLException {
-        getDelegate().setObject(parameterIndex, x, targetSqlType);
+        getDelegate("setObject(parameterIndex,x,targetSqlType)").setObject(parameterIndex, x, targetSqlType);
     }
 
     @Override
     public long executeLargeUpdate() throws SQLException {
-        return getDelegate().executeLargeUpdate();
+        return getDelegate("executeLargeUpdate()").executeLargeUpdate();
     }
 
     @Override
     public long getLargeUpdateCount() throws SQLException {
-        return getDelegate().getLargeUpdateCount();
+        return getDelegate("getLargeUpdateCount()").getLargeUpdateCount();
     }
 
     @Override
     public void setLargeMaxRows(long max) throws SQLException {
-        getDelegate().setLargeMaxRows(max);
+        getDelegate("setLargeMaxRows(max)").setLargeMaxRows(max);
     }
 
     @Override
     public long getLargeMaxRows() throws SQLException {
-        return getDelegate().getLargeMaxRows();
+        return getDelegate("getLargeMaxRows()").getLargeMaxRows();
     }
 
     @Override
     public long[] executeLargeBatch() throws SQLException {
-        return getDelegate().executeLargeBatch();
+        if (isBatchRewriteVoided()) {
+            return getDelegate().executeLargeBatch();
+        }
+
+        createBatchArrayStatementDelegate();
+
+        long rowCount = getDelegate().executeLargeUpdate();
+
+        long[] rv = new long[(int) rowCount];
+        Arrays.fill(rv, SUCCESS_NO_INFO);
+        return rv;
     }
 
     @Override

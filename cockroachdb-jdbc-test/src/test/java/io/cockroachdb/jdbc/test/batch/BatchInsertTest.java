@@ -24,8 +24,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 import io.cockroachdb.jdbc.test.DatabaseFixture;
-import io.cockroachdb.jdbc.test.util.JdbcHelper;
-import io.cockroachdb.jdbc.test.util.PrettyText;
+import io.cockroachdb.jdbc.test.JdbcHelper;
+import io.cockroachdb.jdbc.test.PrettyText;
 
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 @Order(1)
@@ -38,7 +38,7 @@ public class BatchInsertTest extends AbstractIntegrationTest {
     @ParameterizedTest
     @ValueSource(ints = {
             1 << 4, 1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12})
-    public void whenInsertingProductsUsingBatchStatements_thenObserveTimes(int batchSize) throws Exception {
+    public void whenInsertingUsingBatchStatements_thenObserveTimes(int batchSize) throws Exception {
         Assertions.assertFalse(TransactionSynchronizationManager.isActualTransactionActive(), "TX active");
 
         List<Product> products = new ArrayList<>();
@@ -99,7 +99,7 @@ public class BatchInsertTest extends AbstractIntegrationTest {
     @ParameterizedTest
     @ValueSource(ints = {
             1 << 4, 1 << 5, 1 << 6, 1 << 7, 1 << 8, 1 << 9, 1 << 10, 1 << 11, 1 << 12})
-    public void whenInsertingProductsUsingFromStatements_thenObserveTimes(int batchSize) throws Exception {
+    public void whenInsertingUsingFromStatements_thenObserveTimes(int batchSize) throws Exception {
         Assertions.assertFalse(TransactionSynchronizationManager.isActualTransactionActive(), "TX active");
 
         List<Product> products = new ArrayList<>();

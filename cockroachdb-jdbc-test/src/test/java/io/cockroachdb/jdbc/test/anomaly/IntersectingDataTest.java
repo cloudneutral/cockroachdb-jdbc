@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import io.cockroachdb.jdbc.test.DatabaseFixture;
-import io.cockroachdb.jdbc.test.util.PrettyText;
+import io.cockroachdb.jdbc.test.PrettyText;
 
 @DatabaseFixture(beforeTestScript = "db/anomaly/intersecting-ddl.sql")
 public class IntersectingDataTest extends AbstractAnomalyTest {

@@ -1,16 +1,3 @@
--- drop table product cascade ;
-create table if not exists product
-(
-    id              uuid           not null default gen_random_uuid(),
-    version         int            not null,
-    inventory       int            not null,
-    name            varchar(128)   not null,
-    price           numeric(19, 2) not null,
-    sku             varchar(128)   not null unique,
-    last_updated_at timestamptz    not null default clock_timestamp(),
-
-    primary key (id, version)
-);
 show create table product;
 
 insert into product (id,version,inventory,name,price,sku)
@@ -38,6 +25,21 @@ select '00000000-0000-0000-0000-000000000001',
        200.50,
        gen_random_uuid()::string;
 
+insert into product (id,inventory,name,price,sku)
+select '00000000-0000-0000-0000-000000000001',
+       20,
+       'product-y',
+       200.50,
+       gen_random_uuid()::string
+on conflict on constraint product_sku_key do nothing;
+
+insert into product (id,version,inventory,name,price,sku)
+select '00000000-0000-0000-0000-000000000001',
+       0,
+       20,
+       'product-y',
+       (select 1),
+       gen_random_uuid()::string;
 
 select * from product where id='00000000-0000-0000-0000-000000000000' ;
 select * from product where id='00000000-0000-0000-0000-000000000001' and version=0;

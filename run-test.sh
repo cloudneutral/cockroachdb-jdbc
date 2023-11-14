@@ -26,7 +26,7 @@ fn_echo(){
 
 fn_select_group() {
   PS3='Please enter integration test group tag (-Dgroups): '
-  options=("anomaly-test" "connection-retry-test" "batch-insert-test" "batch-update-test" "QUIT")
+  options=("anomaly-test" "connection-retry-test" "batch-insert-test" "batch-update-test" "batch-rewrite-test" "QUIT")
   select opt in "${options[@]}"
   do
       case $opt in
@@ -39,6 +39,10 @@ fn_select_group() {
               break
               ;;
           "batch-update-test")
+              groups=$opt
+              break
+              ;;
+          "batch-rewrite-test")
               groups=$opt
               break
               ;;

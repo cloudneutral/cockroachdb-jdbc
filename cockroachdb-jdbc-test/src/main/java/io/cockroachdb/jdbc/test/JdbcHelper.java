@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test.util;
+package io.cockroachdb.jdbc.test;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -22,7 +22,7 @@ public abstract class JdbcHelper {
             throws SQLException {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             try (ResultSet rs = ps.executeQuery()) {
-                handler.process(rs);
+                handler.handle(rs);
             }
         }
     }

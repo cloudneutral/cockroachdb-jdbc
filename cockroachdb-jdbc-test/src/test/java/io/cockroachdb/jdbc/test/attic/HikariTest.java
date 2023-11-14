@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test;
+package io.cockroachdb.jdbc.test.attic;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -11,13 +11,13 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.IntStream;
 
+import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
+import io.cockroachdb.jdbc.test.PrettyText;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.zaxxer.hikari.HikariDataSource;
-
-import io.cockroachdb.jdbc.test.util.PrettyText;
 
 @Disabled
 public class HikariTest extends AbstractIntegrationTest {

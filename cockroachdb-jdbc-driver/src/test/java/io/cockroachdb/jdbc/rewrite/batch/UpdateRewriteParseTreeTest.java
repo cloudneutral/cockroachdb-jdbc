@@ -1,10 +1,11 @@
-package io.cockroachdb.jdbc.rewrite.update;
+package io.cockroachdb.jdbc.rewrite.batch;
 
 import io.cockroachdb.jdbc.CockroachConnection;
 import io.cockroachdb.jdbc.ConnectionSettings;
-import io.cockroachdb.jdbc.rewrite.CockroachSQLParserFactory;
+import io.cockroachdb.jdbc.rewrite.CockroachParserFactory;
 import io.cockroachdb.jdbc.rewrite.sfu.SelectForUpdateProcessor;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -12,13 +13,14 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
+@Tag("unit-test")
 public class UpdateRewriteParseTreeTest {
     @Test
     public void whenUpdateWithConstantValueAndParameterBinding_expectRewrite()
             throws SQLException {
         String before = "UPDATE product SET inventory = 100, price = ? WHERE id = ?";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
         String expected = "UPDATE product SET inventory = 100, price = dt.p1 " +
                 "FROM (SELECT " +
@@ -55,7 +57,7 @@ public class UpdateRewriteParseTreeTest {
     public void whenUpdateWithParameterBinding_expectRewrite() {
         String before = "UPDATE product SET inventory = ?, price = ? WHERE id = ?";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
         String expected = "UPDATE product SET inventory = dt.p1, price = dt.p2 " +
                 "FROM (SELECT " +
@@ -74,7 +76,7 @@ public class UpdateRewriteParseTreeTest {
                 "last_updated_at = with_min_timestamp(?,?) " +
                 "WHERE id=? and version=?";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
         String expected = "update product set inventory = dt.p1, price = dt.p2, version = dt.p3, " +
                 "last_updated_at = with_min_timestamp(dt.p4, dt.p5) " +
@@ -101,7 +103,7 @@ public class UpdateRewriteParseTreeTest {
                 "WHERE id=? and version=? " +
                 "AND (last_updated_at >= ? OR (last_updated_at IS NULL))";
 
-        String after = CockroachSQLParserFactory.rewriteUpdateStatement(before);
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
 
         String expected = "update product set inventory = dt.p1, price = dt.p2, version = dt.p3, " +
                 "last_updated_at = with_min_timestamp(dt.p4, dt.p5) " +

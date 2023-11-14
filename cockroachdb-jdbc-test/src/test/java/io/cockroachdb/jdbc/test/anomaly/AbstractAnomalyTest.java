@@ -9,7 +9,7 @@ import java.util.concurrent.TimeoutException;
 import org.junit.jupiter.api.Tag;
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
-import io.cockroachdb.jdbc.test.util.ThreadPool;
+import io.cockroachdb.jdbc.test.ThreadPool;
 
 @Tag("anomaly-test")
 public abstract class AbstractAnomalyTest extends AbstractIntegrationTest {

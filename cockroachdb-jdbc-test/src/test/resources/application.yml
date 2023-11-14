@@ -1,7 +1,8 @@
 spring:
   profiles:
-    # one of: local, cloud, dev
-    # one of: ds-hikari, ds-crdb, ds-pgsimple
+    # one of each:
+    #   local, cloud, dev
+    #   ds-hikari, ds-crdb
     active: local,ds-hikari
   output:
     ansi:

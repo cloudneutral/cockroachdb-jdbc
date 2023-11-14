@@ -1,13 +1,15 @@
 package io.cockroachdb.jdbc;
 
+import io.cockroachdb.jdbc.rewrite.CockroachParserFactory;
+import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
+import io.cockroachdb.jdbc.util.WrapperSupport;
+
 import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-import io.cockroachdb.jdbc.rewrite.CockroachSQLParserFactory;
-import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
-import io.cockroachdb.jdbc.util.WrapperSupport;
+import static io.cockroachdb.jdbc.rewrite.CockroachParserFactory.rewriteUpdateStatement;
 
 /**
  * A {@code java.sql.Connection} implementation for CockroachDB, wrapping an underlying {@code PGConnection}.
@@ -33,16 +35,27 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
 
     @Override
     public PreparedStatement prepareStatement(String sql) throws SQLException {
-        final String finalQuery = connectionSettings.getQueryProcessor().processQuery(this, sql);
+        final String query = connectionSettings.getQueryProcessor().processQuery(this, sql);
 
-        if (connectionSettings.isRewriteBatchUpdates()) {
-            if (CockroachSQLParserFactory.isQualifiedUpdateStatement(finalQuery)) {
-                return new CockroachPreparedBatchStatement(getDelegate(), finalQuery);
-            }
+        if (connectionSettings.isRewriteBatchInserts()
+                && CockroachParserFactory.isQualifiedInsertStatement(query)) {
+            String batchQuery = CockroachParserFactory.rewriteInsertStatement(query);
+            return new CockroachPreparedBatchStatement(getDelegate(), query, batchQuery);
         }
 
-        return new CockroachPreparedStatement(
-                getDelegate().prepareStatement(finalQuery));
+        if (connectionSettings.isRewriteBatchUpserts()
+                && CockroachParserFactory.isQualifiedUpsertStatement(query)) {
+            String batchQuery = CockroachParserFactory.rewriteUpsertStatement(query);
+            return new CockroachPreparedBatchStatement(getDelegate(), query, batchQuery);
+        }
+
+        if (connectionSettings.isRewriteBatchUpdates()
+                && CockroachParserFactory.isQualifiedUpdateStatement(query)) {
+            String batchQuery = CockroachParserFactory.rewriteUpdateStatement(query);
+            return new CockroachPreparedBatchStatement(getDelegate(), query, batchQuery);
+        }
+
+        return new CockroachPreparedStatement(getDelegate().prepareStatement(query));
     }
 
     @Override

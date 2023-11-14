@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
-public abstract class AbstractCockroachSQLListener extends CockroachSQLBaseListener {
+public abstract class AbstractCockroachParserListener extends CockroachParserBaseListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Deque<Object> stack = new ArrayDeque<>();

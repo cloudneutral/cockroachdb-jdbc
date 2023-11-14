@@ -240,7 +240,6 @@ public class CockroachPreparedStatement extends WrapperSupport<PreparedStatement
     }
 
     @Override
-
     public void setObject(int parameterIndex, Object x, int targetSqlType, int scaleOrLength) throws SQLException {
         getDelegate().setObject(parameterIndex, x, targetSqlType, scaleOrLength);
     }

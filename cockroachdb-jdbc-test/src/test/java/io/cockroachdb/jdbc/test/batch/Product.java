@@ -1,6 +1,7 @@
 package io.cockroachdb.jdbc.test.batch;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 import org.springframework.data.annotation.Id;
@@ -13,7 +14,13 @@ public class Product {
     private UUID id;
 
     @Column
+    private int version;
+
+    @Column
     private String name;
+
+    @Column
+    private String description;
 
     @Column
     private String sku;
@@ -24,12 +31,31 @@ public class Product {
     @Column
     private int inventory;
 
+    @Column
+    private LocalDateTime lastUpdatedAt;
+
     public UUID getId() {
         return id;
     }
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public LocalDateTime getLastUpdatedAt() {
+        return lastUpdatedAt;
+    }
+
+    public void setLastUpdatedAt(LocalDateTime lastUpdatedAt) {
+        this.lastUpdatedAt = lastUpdatedAt;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
     }
 
     public String getName() {
@@ -67,6 +93,14 @@ public class Product {
 
     public void setSku(String sku) {
         this.sku = sku;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     @Override
