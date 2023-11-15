@@ -7,38 +7,109 @@
 <img align="left" src="docs/logo.png" />
 
 An open-source JDBC Type-4 driver for [CockroachDB](https://www.cockroachlabs.com/) that wraps the PostgreSQL
-JDBC driver ([pgjdbc](https://jdbc.postgresql.org/)) and communicates in the PostgreSQL native network
+JDBC driver ([pgJDBC](https://jdbc.postgresql.org/)) and communicates in the PostgreSQL native network
 wire (v3.0) protocol with CockroachDB.
 
-This project is not affiliated or supported by Cockroach Labs.
+## Disclaimer 
+
+This project is not officially supported by Cockroach Labs. Use of this driver is 
+entirely at your own risk and Cockroach Labs makes no guarantees or warranties 
+about its operation. 
+
+See [MIT](LICENSE.txt) for terms and conditions. 
 
 ## Features
 
-This JDBC driver adds the following features that are relevant to CockroachDB on top of the pgJDBC driver.
+This JDBC driver adds the following features on top of pgJDBC:
 
-- Internal retries on serialization conflicts.
-- Internal retries on connection errors.
-- Rewriting qualified SQL queries to use [SELECT FOR UPDATE](https://www.cockroachlabs.com/docs/stable/select-for-update.html)
-  to reduce serialization conflicts.
-- CockroachDB specific database metadata (version etc).
+- Driver-level retries on serialization conflicts
+- Driver-level retries on connection errors
+- Rewriting qualified SELECT queries to use [SELECT .. FOR UPDATE](https://www.cockroachlabs.com/docs/stable/select-for-update.html)  to reduce serialization conflicts.
+- Rewriting batch INSERT, UPSERT and UPDATE statements to use array un-nesting to speed up bulk operations.
+- CockroachDB database metadata (version information, etc).
 
-All these features are disabled by default, which means the driver is operating in a pass-through mode
-delegating all JDBC API invocations to the pgJDBC driver.
+All features are opt-in and disabled by default. The default operational mode fo this driver
+is therefore to operate in a pass-through mode and delegate most JDBC API invocations 
+to the pgJDBC driver (metadata only exception).
+                   
+### Reducing Retries
 
-Enabling retries _may_ reduce the need for application-level retry logic and thereby enhance compatibility
-with 3rd-party products that don't implement any transaction retries. Enabling `SELECT FOR UPDATE` rewrites
-may reduce serialization conflicts from appearing in the first place and thereby reduce retries to a
-bare minimum or none at all, at the expense of imposing locks on every read operation.
+Enabling explicit transaction retries with `SELECT .. FOR UPDATE` query rewrites _may_ reduce the need for 
+application-level retry logic and enhanced compatibility with 3rd-party products that don't 
+implement any retry logic. Enabling `SELECT .. FOR UPDATE` rewrites alone may reduce serialization 
+conflicts from appearing and reduce retries to a bare minimum or none at all, at the expense of 
+imposing locks on every qualified (read-only) SELECT operation. `SELECT FOR UPDATE` rewrites are 
+scope to either connection level where all qualified `SELECT` queries are rewritten, or to transaction 
+level where all qualified `SELECT` within a given transaction are rewritten.
 
-`SELECT FOR UPDATE` rewrites can be scope to connection level where all qualified `SELECT` queries are rewritten,
-or to transaction level where all qualified `SELECT` within a given transaction are rewritten.
-
-See the [design notes](docs/DESIGN.md) of how driver-level retries works and its limitations.
-
-For more information about client-side retry logic, see also:
+See the [design notes](docs/DESIGN.md) of how driver-level retries works and its limitations. For more information 
+about client-side retry logic, see also:
 
 - [Transaction Contention](https://www.cockroachlabs.com/docs/stable/performance-best-practices-overview.html#transaction-contention)
 - [Connection Retry Loop](https://www.cockroachlabs.com/docs/stable/node-shutdown.html#connection-retry-loop)
+
+### Speeding up bulk operations
+
+The driver can rewrite batch `UPDATE`, `INSERT` and `UPSERT` DML statements to use SQL array un-nesting. This will 
+drastically improve performance for bulk operations that otherwise pass single statements over the wire, 
+unless the pgJDBC `reWriteBatchedInserts` properties is set to `true`. The limitation of the pgJDBC rewrite however,
+is that the batch size has a hard limit of 128, and it only applies to INSERT statements. 
+
+This driver removes these 
+limitations and enable full batching-over-the-wire for `INSERT`, `UPDATE` and `UPSERT` 
+(separate from `INSERT .. on CONFLICT DO ..`) statements.
+
+#### Examples
+               
+Assume two separate product update statements:
+
+```sql
+UPDATE product SET inventory=11, price=200.00, version=version+1, last_updated_at = with_min_timestamp(transaction_timestamp()) 
+               WHERE id='00000000-0000-0000-0000-000000000000'::uuid and version=0;
+UPDATE product SET inventory=21, price=300.00, version=version+1, last_updated_at = with_min_timestamp(transaction_timestamp()) 
+               WHERE id='00000000-0000-0000-0000-000000000001'::uuid and version=0;
+```
+
+After rewrite and collapsed to a single update using un-nested arrays:
+
+```sql
+update product set inventory=_dt.p1, price=_dt.p2, version=product.version + 1, last_updated_at=with_min_timestamp(transaction_timestamp())
+from (select unnest(ARRAY[11,21]) as p1,
+             unnest(ARRAY[200.00,300.00]) as p2,
+             unnest(ARRAY['00000000-0000-0000-0000-000000000000'::uuid,'00000000-0000-0000-0000-000000000001'::uuid]) as p3) 
+         as _dt
+where product.id=_dt.p3 and product.version=0;
+```
+
+The driver level rewrite is transparent to clients that only use the normal `PreparedStatement`'s `addBatch` 
+and `executeBatch` methods.
+
+```java
+try (PreparedStatement ps = connection.prepareStatement(
+        "UPDATE product SET inventory=?, price=? version=? last_updated_at = with_min_timestamp(transaction_timestamp()) " +
+        "WHERE id=? and version=?")) {
+
+    chunkOfProducts.forEach(product -> {
+        ps.setInt(1, product.getInventory());
+        ps.setInt(2, product.getVersion());
+        ps.setBigDecimal(3, product.getPrice());
+        ps.setObject(4, product.getId());
+        ps.setInt(5, product.getVersion());
+
+        ps.addBatch();
+    });
+    ps.executeBatch();  
+} catch (SQLException ex) {
+}
+```
+
+The SQL parser in the driver uses a limited [SQL grammar](cockroachdb-jdbc-driver/src/main/resources/io/cockroachdb/jdbc/rewrite/CockroachParser.g4), 
+so there are limitations on what type of CockroachDB DML statements (full [grammar](https://www.cockroachlabs.com/docs/stable/sql-grammar)) 
+it supports. The basic SQL elements are supported including scalar expressions, logical and binary
+expressions, function calls, type casts and NULL expressions. 
+
+If more complex expressions like window functions are used, the driver silently reverts
+back to using normal pass-through batch operations (meaning singleton UPDATE and UPSERT).
 
 ## Getting Started
 
@@ -291,6 +362,24 @@ By default, the driver will use PostgreSQL JDBC driver metadata provided in `jav
 rather than CockroachDB specific metadata. While the latter is more correct, it causes incompatibilities
 with libraries that bind to PostgreSQL version details, such as Flyway and other tools.
 
+### reWriteBatchedInserts (since 1.1)
+
+(default: false)
+
+Enable optimization to rewrite batch `INSERT` statements to use arrays. 
+
+### reWriteBatchedUpserts (since 1.1)
+
+(default: false)
+
+Enable optimization to rewrite batch `UPSERT` statements to use arrays.
+
+### reWriteBatchedUpdates (since 1.1)
+
+(default: false)
+
+Enable optimization to rewrite batch `UPDATE` statements to use arrays.
+
 ## Logging
 
 This driver uses [SLF4J](https://www.slf4j.org/) for logging which means its agnostic to the logging
@@ -446,6 +535,7 @@ Available test groups include:
 - connection-retry-test - Runs a test with connection retries enabled.
 - batch-insert-test - Batch inserts load test (using different batch sizes).
 - batch-update-test - Batch updates load test.
+- batch-rewrite-test - Batch DML rewrite test.
 
 See the [pom.xml](pom.xml) file for changing the database URL and other settings (under `test` profile).
 

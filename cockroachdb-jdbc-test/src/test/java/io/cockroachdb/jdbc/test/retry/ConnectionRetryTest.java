@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test.batch;
+package io.cockroachdb.jdbc.test.retry;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -13,6 +13,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.cockroachdb.jdbc.test.rewrite.Product;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
@@ -46,15 +47,16 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
         jdbcTemplate.execute("DELETE FROM product WHERE 1=1");
 
-        jdbcTemplate.batchUpdate("INSERT INTO product (id,inventory,price,name,sku) values (?,?,?,?,?)",
+        jdbcTemplate.batchUpdate("INSERT INTO product (id,version,inventory,price,name,sku) values (?,?,?,?,?,?)",
                 new BatchPreparedStatementSetter() {
                     @Override
                     public void setValues(PreparedStatement ps, int i) throws SQLException {
                         ps.setObject(1, UUID.randomUUID());
-                        ps.setObject(2, 500);
-                        ps.setObject(3, BigDecimal.TEN);
-                        ps.setObject(4, "CockroachDB Unleashed 2nd Ed");
-                        ps.setObject(5, UUID.randomUUID().toString());
+                        ps.setInt(2, 0);
+                        ps.setObject(3, 500);
+                        ps.setObject(4, BigDecimal.TEN);
+                        ps.setObject(5, "CockroachDB Unleashed 2nd Ed");
+                        ps.setObject(6, UUID.randomUUID().toString());
                     }
 
                     @Override
@@ -79,8 +81,8 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
 
         JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
 
-        final int productCount = jdbcTemplate.queryForObject("select count(1) from product", Integer.class);
-        final long originalSum = jdbcTemplate.queryForObject("select sum(inventory) from product", Long.class);
+        final Integer productCount = jdbcTemplate.queryForObject("select count(1) from product", Integer.class);
+        final Long originalSum = jdbcTemplate.queryForObject("select sum(inventory) from product", Long.class);
 
         Assertions.assertTrue(productCount > 0, "No products?");
 
@@ -121,7 +123,7 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
                             }
                         });
 
-                PrettyText.println(AnsiColor.YELLOW,
+                PrettyText.println(AnsiColor.BRIGHT_MAGENTA,
                         "Updating %,d products in explicit transaction at offset %,d for approx %d sec - SHUTDOWN NODES / LB NOW AT ANY POINT",
                         productList.size(), offset.get(),
                         delayPerUpdateDuration.multipliedBy(productList.size()).toSeconds());

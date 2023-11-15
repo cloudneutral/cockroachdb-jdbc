@@ -75,7 +75,7 @@ setClauseList
    ;
 
 setClause
-   : identifier EQUALS atom
+   : identifier EQUALS expression
    ;
 
 whereClause
@@ -83,7 +83,9 @@ whereClause
     ;
 
 expression
-    : NOT expression                                                # notExpression
+    : expression op=(ASTERISK | DIV | MOD ) expression              # multiplyOrDivideExpression
+    | expression op=(PLUS | MINUS ) expression                      # plusOrMinusExpression
+    | NOT expression                                                # notExpression
     | left=expression comparisonOperator right=expression           # comparisonExpression
     | expression logicalOperator expression                         # logicalExpression
     | expression IS NOT? NULL                                       # isNullExpression
@@ -92,10 +94,10 @@ expression
     ;
 
 atom
-    : literal (TYPE_CAST identifier)?                               # literalAtom
-    | identifier  (TYPE_CAST identifier)?                           # identifierAtom
-    | (MINUS | PLUS)? placeholder (TYPE_CAST identifier)?           # placeholderAtom
-    | functionCall   (TYPE_CAST identifier)?                        # functionCallAtom
+    : (PLUS | MINUS )? literal (TYPE_CAST identifier)?              # literalAtom
+    | (PLUS | MINUS )? identifier (TYPE_CAST identifier)?           # identifierAtom
+    | (PLUS | MINUS )? placeholder (TYPE_CAST identifier)?          # placeholderAtom
+    | (PLUS | MINUS )? functionCall (TYPE_CAST identifier)?         # functionCallAtom
     ;
 
 logicalOperator
@@ -117,9 +119,14 @@ literal
     : NULL
     | TRUE
     | FALSE
-    | (MINUS | PLUS)? INTEGER_LITERAL
-    | (MINUS | PLUS)? DECIMAL_LITERAL
+    | sign? DECIMAL_LITERAL
+    | sign? FLOAT_LITERAL
     | STRING_LITERAL+
+    ;
+
+sign
+    : PLUS
+    | MINUS
     ;
 
 identifier

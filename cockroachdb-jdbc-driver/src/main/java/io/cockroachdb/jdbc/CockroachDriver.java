@@ -129,12 +129,12 @@ public class CockroachDriver implements Driver {
         final ConnectionSettings connectionSettings = new ConnectionSettings();
         connectionSettings.setUseCockroachMetadata(Boolean.parseBoolean(
                 CockroachProperty.USE_COCKROACH_METADATA.toDriverPropertyInfo(properties).value));
-        connectionSettings.setRewriteBatchUpdates(Boolean.parseBoolean(
-                CockroachProperty.REWRITE_BATCHED_UPDATES.toDriverPropertyInfo(properties).value));
-        connectionSettings.setRewriteBatchUpserts(Boolean.parseBoolean(
-                CockroachProperty.REWRITE_BATCHED_UPSERTS.toDriverPropertyInfo(properties).value));
         connectionSettings.setRewriteBatchInserts(Boolean.parseBoolean(
                 CockroachProperty.REWRITE_BATCHED_INSERTS.toDriverPropertyInfo(properties).value));
+        connectionSettings.setRewriteBatchUpserts(Boolean.parseBoolean(
+                CockroachProperty.REWRITE_BATCHED_UPSERTS.toDriverPropertyInfo(properties).value));
+        connectionSettings.setRewriteBatchUpdates(Boolean.parseBoolean(
+                CockroachProperty.REWRITE_BATCHED_UPDATES.toDriverPropertyInfo(properties).value));
 
         if (Boolean.parseBoolean(CockroachProperty.IMPLICIT_SELECT_FOR_UPDATE.toDriverPropertyInfo(properties).value)) {
             connectionSettings.setQueryProcessor(SelectForUpdateProcessor.INSTANCE);

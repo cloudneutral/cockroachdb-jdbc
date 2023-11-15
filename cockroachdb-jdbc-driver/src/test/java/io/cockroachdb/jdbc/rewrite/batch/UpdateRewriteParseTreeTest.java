@@ -15,6 +15,59 @@ import java.sql.SQLException;
 
 @Tag("unit-test")
 public class UpdateRewriteParseTreeTest {
+
+    @Test
+    public void whenUpdateWithFunctionExpression_expectRewrite() {
+        String before = "UPDATE product SET inventory=?, price=?, version = version + 1, " +
+                "last_updated_at = with_min_timestamp(transaction_timestamp()) " +
+                "WHERE id=? and version=0";
+
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
+
+        String expected = "update product set inventory = _dt.p1, price = _dt.p2, version = product.version + 1, " +
+                "last_updated_at = with_min_timestamp(transaction_timestamp()) " +
+                "from (select unnest(?) as p1, unnest(?) as p2, unnest(?) as p3) as _dt " +
+                "where product.id = _dt.p3 and product.version = 0";
+
+        Assertions.assertEquals(expected.toLowerCase(), after.toLowerCase());
+    }
+
+    @Test
+    public void whenUpdateWithFunctionPredicate_expectRewrite() {
+        String before = "UPDATE account SET balance =  ?, updated_at = clock_timestamp() " +
+                "WHERE id = ? " +
+                "AND closed = false " +
+                "AND abs(allow_negative) >= 0;";
+
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
+
+        String expected = "update account set balance = _dt.p1, updated_at = clock_timestamp() " +
+                "from (select unnest(?) as p1, unnest(?) as p2) as _dt " +
+                "where account.id = _dt.p2 " +
+                "and account.closed = false " +
+                "and abs(account.allow_negative) >= 0";
+
+        Assertions.assertEquals(expected.toLowerCase(), after.toLowerCase());
+    }
+
+    @Test
+    public void whenUpdateWithFunctionPredicateExpression_expectRewrite() {
+        String before = "UPDATE account SET balance =  ?, updated_at = clock_timestamp() " +
+                "WHERE id = ? " +
+                "AND closed = false " +
+                "AND (foo(balance) + ?) * abs(allow_negative - 1) >= 0";
+
+        String after = CockroachParserFactory.rewriteUpdateStatement(before);
+
+        String expected = "update account set balance = _dt.p1, updated_at = clock_timestamp() " +
+                "from (select unnest(?) as p1, unnest(?) as p2, unnest(?) as p3) as _dt " +
+                "where account.id = _dt.p2 " +
+                "and account.closed = false " +
+                "and (foo(account.balance) + _dt.p3) * abs(account.allow_negative - 1) >= 0";
+
+        Assertions.assertEquals(expected.toLowerCase(), after.toLowerCase());
+    }
+
     @Test
     public void whenUpdateWithConstantValueAndParameterBinding_expectRewrite()
             throws SQLException {

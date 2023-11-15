@@ -1,8 +1,8 @@
 spring:
   profiles:
-    # one of each:
-    #   local, cloud, dev
-    #   ds-hikari, ds-crdb
+    # One of each profile:
+    # Environment: local, cloud, dev
+    #  Datasource: ds-hikari, ds-crdb
     active: local,ds-hikari
   output:
     ansi:
@@ -21,7 +21,6 @@ spring:
       # 1m
       idle-timeout: 60000
   jpa:
-    open-in-view: false
     properties:
       hibernate:
         jdbc:

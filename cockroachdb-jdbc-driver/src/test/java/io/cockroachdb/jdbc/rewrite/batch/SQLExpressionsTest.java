@@ -33,8 +33,14 @@ public class SQLExpressionsTest {
     );
 
     public static final Stream<Arguments> updates = Stream.of(
+            Arguments.of(true, "update x.t set a=?, b=? where 1=2"),
+            Arguments.of(true, "update x.t set a=?, b=? where false"),
             Arguments.of(true, "update t set a=?, b=? where 1=2"),
+            Arguments.of(true, "update t set a=-?, b=+? where a > 1+2"),
+            Arguments.of(true, "update t set a=-?, b=-? where a + 1 != 1+2"),
+            Arguments.of(true, "update t set a=-?, b= foo(-? + (bar(x))) where a + 1 != 1+2"),
 
+            Arguments.of(false, "insert into t (a,b,c) values (?,?,123)"),
             Arguments.of(false, "select * from pg_extension.x where id in (?)"),
             Arguments.of(false, "delete from t where 1=2")
     );
@@ -42,7 +48,7 @@ public class SQLExpressionsTest {
     @ParameterizedTest
     @VariableSource("inserts")
     public void givenInsertStatement_expectRewriteIfValid(boolean valid, String before) {
-        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedInsertStatement(before));
+        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedInsertStatement(before), before);
         if (valid) {
             String after = CockroachParserFactory.rewriteInsertStatement(before);
             System.out.println(after);
@@ -57,7 +63,7 @@ public class SQLExpressionsTest {
     @ParameterizedTest
     @VariableSource("updates")
     public void givenUpdateStatement_expectRewriteIfValid(boolean valid, String before) {
-        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedUpdateStatement(before));
+        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedUpdateStatement(before), before);
         if (valid) {
             String after = CockroachParserFactory.rewriteUpdateStatement(before);
             System.out.println(after);

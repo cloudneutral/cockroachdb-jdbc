@@ -5,6 +5,7 @@ import io.cockroachdb.jdbc.rewrite.CockroachParser;
 import io.cockroachdb.jdbc.rewrite.SQLParseException;
 import io.cockroachdb.jdbc.util.Pair;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -106,7 +107,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
         String prefix = pop(String.class, ctx);
 
         StringBuilder sb = new StringBuilder()
-                .append(tableName + "." + prefix);
+                .append(prefix);
 
         if (ctx.IS() != null) {
             sb.append(" IS");
@@ -138,7 +139,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     @Override
     public void exitComparisonExpression(CockroachParser.ComparisonExpressionContext ctx) {
         String right = pop(String.class, ctx);
-        String left = tableName + "." + pop(String.class, ctx);
+        String left = pop(String.class, ctx);
 
         if (ctx.comparisonOperator().GE() != null) {
             push(left + " >= " + right, ctx);
@@ -158,6 +159,32 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
+    public void exitMultiplyOrDivideExpression(CockroachParser.MultiplyOrDivideExpressionContext ctx) {
+        String right = pop(String.class, ctx);
+        String left = pop(String.class, ctx);
+
+        if (ctx.ASTERISK() != null) {
+            push(left + " * " + right, ctx);
+        } else if (ctx.DIV() != null) {
+            push(left + " / " + right, ctx);
+        } else if (ctx.MOD() != null) {
+            push(left + " % " + right, ctx);
+        }
+    }
+
+    @Override
+    public void exitPlusOrMinusExpression(CockroachParser.PlusOrMinusExpressionContext ctx) {
+        String right = pop(String.class, ctx);
+        String left = pop(String.class, ctx);
+
+        if (ctx.PLUS() != null) {
+            push(left + " + " + right, ctx);
+        } if (ctx.MINUS() != null) {
+            push(left + " - " + right, ctx);
+        }
+    }
+
+    @Override
     public void exitLiteral(CockroachParser.LiteralContext ctx) {
         push(ctx.getText(), ctx);
     }
@@ -166,7 +193,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     public void exitIdentifier(CockroachParser.IdentifierContext ctx) {
         if (!(ctx.getParent() instanceof CockroachParser.FunctionNameContext)) {
             String id = ctx.getText();
-            push(id, ctx);
+            push(tableName + "." + id, ctx);
         }
     }
 

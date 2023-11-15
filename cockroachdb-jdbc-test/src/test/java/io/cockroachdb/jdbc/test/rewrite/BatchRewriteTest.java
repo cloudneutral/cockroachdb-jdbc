@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test.batch;
+package io.cockroachdb.jdbc.test.rewrite;
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 import io.cockroachdb.jdbc.test.DatabaseFixture;
@@ -9,7 +9,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
-import org.springframework.jdbc.core.simple.SimpleJdbcCall;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 
 import java.math.BigDecimal;

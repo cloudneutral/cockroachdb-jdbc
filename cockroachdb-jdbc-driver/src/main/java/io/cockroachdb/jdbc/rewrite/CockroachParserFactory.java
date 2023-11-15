@@ -55,7 +55,7 @@ public abstract class CockroachParserFactory {
 
         CockroachParser parser = createParser(query);
         parser.addParseListener(new UpsertRewriteParseTreeListener(after::append));
-        parser.root();
+        parser.upsertStatement();
 
         return after.toString();
     }
@@ -65,7 +65,7 @@ public abstract class CockroachParserFactory {
 
         CockroachParser parser = createParser(query);
         parser.addParseListener(new UpdateRewriteParseTreeListener(after::append));
-        parser.root();
+        parser.updateStatement();
 
         return after.toString();
     }

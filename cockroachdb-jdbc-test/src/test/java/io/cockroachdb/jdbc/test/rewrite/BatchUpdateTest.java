@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test.batch;
+package io.cockroachdb.jdbc.test.rewrite;
 
 import java.math.BigDecimal;
 import java.sql.Connection;

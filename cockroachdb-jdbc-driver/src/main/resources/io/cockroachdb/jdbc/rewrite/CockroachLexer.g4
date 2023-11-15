@@ -36,6 +36,8 @@ RIGHT_PAREN: ')';
 EQUALS: '=';
 MINUS : '-';
 PLUS: '+';
+DIV: '/';
+MOD: '%';
 GT: '>';
 GE: '>=';
 LT: '<';
@@ -53,27 +55,22 @@ STRING_LITERAL
     | '"' ( ~('"'|'\\') | ('\\' .) )* '"'
     ;
 
-INTEGER_LITERAL
-    : DIGIT+
+DECIMAL_LITERAL
+    : DECIMAL_DIGIT+
     ;
 
-DECIMAL_LITERAL
-    : DECIMAL_DIGITS
+FLOAT_LITERAL
+    : DECIMAL_DOT_DIGITS
     ;
 
 IDENTIFIER
     : LETTER LETTER_OR_DIGIT*
     ;
 
-fragment SIGN
-    : [+-]
-    ;
+fragment DECIMAL_DOT_DIGITS
+    : (DECIMAL_DIGIT+ '.' DECIMAL_DIGIT+ |  DECIMAL_DIGIT+ '.' | '.' DECIMAL_DIGIT+);
 
-fragment DECIMAL_DIGITS
-    : SIGN? DIGIT+ ('.' DIGIT+)?
-    ;
-
-fragment DIGIT
+fragment DECIMAL_DIGIT
     : [0-9]
     ;
 
