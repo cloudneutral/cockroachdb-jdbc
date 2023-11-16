@@ -1,6 +1,5 @@
 package io.cockroachdb.jdbc;
 
-import io.cockroachdb.jdbc.retry.PreparedStatementRetryInterceptor;
 import io.cockroachdb.jdbc.util.CallableSQLOperation;
 import io.cockroachdb.jdbc.util.Pair;
 import io.cockroachdb.jdbc.util.WrapperSupport;
@@ -493,32 +492,18 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             addRowSetter(parameterIndex, () -> {
                 getDelegate().setRef(parameterIndex, x);
                 return null;
-            }, Types.REF, x);
+            }, x.getBaseTypeName(), x.getObject());
         }
     }
 
     @Override
     public void setBlob(int parameterIndex, Blob x) throws SQLException {
-        if (isBatchRewriteVoided()) {
-            getDelegate().setBlob(parameterIndex, x);
-        } else {
-            addRowSetter(parameterIndex, () -> {
-                getDelegate().setBlob(parameterIndex, x);
-                return null;
-            }, Types.BLOB, x);
-        }
+        getDelegate().setBlob(parameterIndex, x);
     }
 
     @Override
     public void setClob(int parameterIndex, Clob x) throws SQLException {
-        if (isBatchRewriteVoided()) {
-            getDelegate().setClob(parameterIndex, x);
-        } else {
-            addRowSetter(parameterIndex, () -> {
-                getDelegate().setClob(parameterIndex, x);
-                return null;
-            }, Types.CLOB, x);
-        }
+        getDelegate().setClob(parameterIndex, x);
     }
 
     @Override
@@ -529,7 +514,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             addRowSetter(parameterIndex, () -> {
                 getDelegate().setArray(parameterIndex, x);
                 return null;
-            }, Types.ARRAY, x);
+            }, x.getBaseTypeName(), x.getArray());
         }
     }
 
@@ -577,14 +562,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setRowId(int parameterIndex, RowId x) throws SQLException {
-        if (isBatchRewriteVoided()) {
-            getDelegate().setRowId(parameterIndex, x);
-        } else {
-            addRowSetter(parameterIndex, () -> {
-                getDelegate().setRowId(parameterIndex, x);
-                return null;
-            }, Types.ROWID, x);
-        }
+        getDelegate().setRowId(parameterIndex, x);
     }
 
     @Override
@@ -606,14 +584,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void setNClob(int parameterIndex, NClob value) throws SQLException {
-        if (isBatchRewriteVoided()) {
-            getDelegate().setNClob(parameterIndex, value);
-        } else {
-            addRowSetter(parameterIndex, () -> {
-                getDelegate().setNClob(parameterIndex, value);
-                return null;
-            }, Types.NCLOB, value);
-        }
+        getDelegate().setNClob(parameterIndex, value);
     }
 
     @Override
@@ -639,7 +610,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             addRowSetter(parameterIndex, () -> {
                 getDelegate().setSQLXML(parameterIndex, xmlObject);
                 return null;
-            }, Types.SQLXML, xmlObject);
+            }, Types.SQLXML, xmlObject.getString());
         }
     }
 

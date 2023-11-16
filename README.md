@@ -22,71 +22,79 @@ See [MIT](LICENSE.txt) for terms and conditions.
 
 This JDBC driver adds the following features on top of pgJDBC:
 
-- Driver-level retries on serialization conflicts
-- Driver-level retries on connection errors
-- Rewriting qualified SELECT queries to use [SELECT .. FOR UPDATE](https://www.cockroachlabs.com/docs/stable/select-for-update.html)  to reduce serialization conflicts.
-- Rewriting batch INSERT, UPSERT and UPDATE statements to use array un-nesting to speed up bulk operations.
-- CockroachDB database metadata (version information, etc).
+- Driver-level retries on [serialization conflicts](https://www.cockroachlabs.com/docs/v23.1/transaction-retry-error-reference)
+and [connection or ambiguous errors](https://www.cockroachlabs.com/docs/v23.1/common-errors#result-is-ambiguous)
+- Rewriting qualified SELECT queries to use [SELECT .. FOR UPDATE](https://www.cockroachlabs.com/docs/stable/select-for-update.html)  to [reduce serialization conflicts](https://www.cockroachlabs.com/docs/v23.1/performance-recipes#reduce-transaction-contention).
+- Rewriting batch INSERT, UPSERT and UPDATE statements to use array un-nesting to [speed up bulk operations](https://www.cockroachlabs.com/docs/v23.1/insert#bulk-inserts).
+- CockroachDB [database metadata](https://docs.oracle.com/en/java/javase/17/docs/api/java.sql/java/sql/DatabaseMetaData.html) (version information, etc).
 
-All features are opt-in and disabled by default. The default operational mode fo this driver
-is therefore to operate in a pass-through mode and delegate most JDBC API invocations 
-to the pgJDBC driver (metadata only exception).
+All the above are independent opt-in features disabled by default, except for database metadata. 
+The default operational mode is therefore proxy pass-through mode where all client JDBC API invocations
+are delegated to the pgJDBC driver.
                    
 ### Reducing Retries
 
-Enabling explicit transaction retries with `SELECT .. FOR UPDATE` query rewrites _may_ reduce the need for 
-application-level retry logic and enhanced compatibility with 3rd-party products that don't 
-implement any retry logic. Enabling `SELECT .. FOR UPDATE` rewrites alone may reduce serialization 
-conflicts from appearing and reduce retries to a bare minimum or none at all, at the expense of 
-imposing locks on every qualified (read-only) SELECT operation. `SELECT FOR UPDATE` rewrites are 
-scope to either connection level where all qualified `SELECT` queries are rewritten, or to transaction 
-level where all qualified `SELECT` within a given transaction are rewritten.
+CockroachDB is a distributed SQL database that runs in serializable (1SR) isolation mode. As such, it's more
+prone to transient errors under contention scenarios or due to the complexities of data distribution 
+in combination with strong transactional guarantees. Transient errors can be both reduced and retried 
+either at server side (which happens automatically), application client side or in this case driver side.
 
-See the [design notes](docs/DESIGN.md) of how driver-level retries works and its limitations. For more information 
-about client-side retry logic, see also:
+Using `SELECT .. FOR UPDATE` to preemptively lock rows later to be updated in a transaction is one
+technique to [reduce retries](https://www.cockroachlabs.com/docs/v23.1/performance-recipes#reduce-transaction-contention)
+from transaction contention. This driver can rewrite `SELECT` queries to use `FOR UPDATE` if certain 
+preconditions are satisfied, which removes the need to refactor an existing codebase. Enabling query 
+rewrites along with the driver level retry logic (replaying transactions) may reduce serialization 
+conflicts from manifesting all the way to the application clients, at the expense of imposing locks 
+on every qualified `SELECT` operation.
 
-- [Transaction Contention](https://www.cockroachlabs.com/docs/stable/performance-best-practices-overview.html#transaction-contention)
-- [Connection Retry Loop](https://www.cockroachlabs.com/docs/stable/node-shutdown.html#connection-retry-loop)
+For further information, see the [design notes](docs/DESIGN.md) of how the driver-level retries works and 
+its limitations. 
 
 ### Speeding up bulk operations
 
-The driver can rewrite batch `UPDATE`, `INSERT` and `UPSERT` DML statements to use SQL array un-nesting. This will 
-drastically improve performance for bulk operations that otherwise pass single statements over the wire, 
-unless the pgJDBC `reWriteBatchedInserts` properties is set to `true`. The limitation of the pgJDBC rewrite however,
-is that the batch size has a hard limit of 128, and it only applies to INSERT statements. 
+The driver can rewrite batch `UPDATE`, `INSERT` and `UPSERT` DML statements to use SQL array un-nesting. 
+This will drastically improve performance for bulk operations that would otherwise pass single statements 
+over the wire. For INSERT statements, the pgJDBC also provides rewrites if the `reWriteBatchedInserts` 
+property is set to `true`. The limitation of the pgJDBC rewrite however, is that the batch size has a 
+hard coded limit of 128 and it only applies to `INSERT` statements and `INSERT .. ON CONFLICT` _upserts_. 
 
-This driver removes these 
-limitations and enable full batching-over-the-wire for `INSERT`, `UPDATE` and `UPSERT` 
-(separate from `INSERT .. on CONFLICT DO ..`) statements.
+This driver removes these limitations by using a different technique that enables full batching-over-the-wire 
+for `INSERT`, `UPDATE` and `UPSERT` (akin to `INSERT .. on CONFLICT DO ..`) [statements](https://www.cockroachlabs.com/docs/v23.1/upsert).
 
 #### Examples
                
-Assume two separate product update statements:
+Assume there's two separate product UPDATE statements that are being batched. When using JDBC batch
+statements, these statements aren't actually batched over the wire but sent individually.
 
 ```sql
-UPDATE product SET inventory=11, price=200.00, version=version+1, last_updated_at = with_min_timestamp(transaction_timestamp()) 
+UPDATE product SET inventory=10, price=300.00, version=version+1, 
+               last_updated_at = with_min_timestamp(transaction_timestamp()) 
                WHERE id='00000000-0000-0000-0000-000000000000'::uuid and version=0;
-UPDATE product SET inventory=21, price=300.00, version=version+1, last_updated_at = with_min_timestamp(transaction_timestamp()) 
+UPDATE product SET inventory=15, price=600.00, version=version+1, 
+               last_updated_at = with_min_timestamp(transaction_timestamp()) 
                WHERE id='00000000-0000-0000-0000-000000000001'::uuid and version=0;
 ```
 
-After rewrite and collapsed to a single update using un-nested arrays:
+When rewriting this, these two statements are collapsed to a single UPDATE using un-nested arrays:
 
 ```sql
-update product set inventory=_dt.p1, price=_dt.p2, version=product.version + 1, last_updated_at=with_min_timestamp(transaction_timestamp())
-from (select unnest(ARRAY[11,21]) as p1,
-             unnest(ARRAY[200.00,300.00]) as p2,
-             unnest(ARRAY['00000000-0000-0000-0000-000000000000'::uuid,'00000000-0000-0000-0000-000000000001'::uuid]) as p3) 
+update product set inventory=_dt.p1, price=_dt.p2, version=product.version + 1, 
+                   last_updated_at=with_min_timestamp(transaction_timestamp())
+from (select unnest(ARRAY[10,15]) as p1,
+             unnest(ARRAY[300.00,600.00]) as p2,
+             unnest(ARRAY['00000000-0000-0000-0000-000000000000'::uuid,
+                          '00000000-0000-0000-0000-000000000001'::uuid]) as p3) 
          as _dt
 where product.id=_dt.p3 and product.version=0;
 ```
 
-The driver level rewrite is transparent to clients that only use the normal `PreparedStatement`'s `addBatch` 
-and `executeBatch` methods.
+The driver can automatically rewrite these statements by intercepting `PreparedStatement`'s `addBatch` 
+and `executeBatch` methods. Similar to `FOR UPDATE` this would mean no existing codebase refactoring.
 
 ```java
 try (PreparedStatement ps = connection.prepareStatement(
-        "UPDATE product SET inventory=?, price=? version=? last_updated_at = with_min_timestamp(transaction_timestamp()) " +
+        "UPDATE product SET inventory=?, price=? version=?, " +
+        "last_updated_at = with_min_timestamp(transaction_timestamp()) " +
         "WHERE id=? and version=?")) {
 
     chunkOfProducts.forEach(product -> {
@@ -98,23 +106,52 @@ try (PreparedStatement ps = connection.prepareStatement(
 
         ps.addBatch();
     });
-    ps.executeBatch();  
+    ps.executeBatch();  // or executeLargeBatch()
 } catch (SQLException ex) {
 }
 ```
+      
+#### Limitations
 
-The SQL parser in the driver uses a limited [SQL grammar](cockroachdb-jdbc-driver/src/main/resources/io/cockroachdb/jdbc/rewrite/CockroachParser.g4), 
-so there are limitations on what type of CockroachDB DML statements (full [grammar](https://www.cockroachlabs.com/docs/stable/sql-grammar)) 
-it supports. The basic SQL elements are supported including scalar expressions, logical and binary
-expressions, function calls, type casts and NULL expressions. 
+The driver's SQL parser uses a limited [SQL grammar](cockroachdb-jdbc-driver/src/main/resources/io/cockroachdb/jdbc/rewrite/CockroachParser.g4) for the rewrites, so there are limitations on 
+what type of CockroachDB DML statements (full [grammar](https://www.cockroachlabs.com/docs/stable/sql-grammar)) it supports. The basic SQL elements are 
+supported including scalar expressions, logical and binary expressions, function calls, type casts 
+and NULL expressions. That should include most ORM generated DML statements and a bit more. 
 
-If more complex expressions like window functions are used, the driver silently reverts
-back to using normal pass-through batch operations (meaning singleton UPDATE and UPSERT).
+If a more complex expression like window functions is used, the driver silently reverts to using 
+normal pass-through batch operations (meaning singleton statements).
+
+In addition, certain [PreparedStatement](https://docs.oracle.com/en/java/javase/17/docs/api/java.sql/java/sql/PreparedStatement.html) 
+methods invalidate rewrites when its obvious it's not a DML statements or otherwise does not 
+qualify for SQL arrays. 
+  
+Supported setter methods:
+
+- void setNull(int parameterIndex, int sqlType)     
+- void setBoolean(int parameterIndex, boolean x) 
+- void setByte(int parameterIndex, byte x) 
+- void setShort(int parameterIndex, short x) 
+- void setInt(int parameterIndex, int x) 
+- void setLong(int parameterIndex, long x) 
+- void setFloat(int parameterIndex, float x) 
+- void setDouble(int parameterIndex, double x) 
+- void setBigDecimal(int parameterIndex, BigDecimal x) 
+- void setString(int parameterIndex, String x) 
+- void setBytes(int parameterIndex, byte[] x) 
+- void setDate(int parameterIndex, Date x) 
+- void setTime(int parameterIndex, Time x) 
+- void setTimestamp(int parameterIndex, Timestamp x) 
+- void setObject(int parameterIndex, Object x, int targetSqlType) 
+- void setObject(int parameterIndex, Object x) 
+- void setRef(int parameterIndex, Ref x) 
+- void setArray(int parameterIndex, Array x) 
+- void setURL(int parameterIndex, URL x) 
+- void setNString(int parameterIndex, String value) 
+- void setSQLXML(int parameterIndex, SQLXML xmlObject) 
 
 ## Getting Started
 
-Example of creating a JDBC connection and executing a simple `SELECT` query in an implicit transaction
-(auto-commit):
+Example of creating a JDBC connection and executing a simple `SELECT` query in an implicit transaction:
 
 ```java
 try (Connection connection 
@@ -187,7 +224,7 @@ Then add the Maven repository to your `pom.xml` file (alternatively in Maven's [
 ```xml
 <repository>
     <id>github</id>
-    <name>Cockroach Labs Maven Packages</name>
+    <name>GitHub CockroachDB Apache Maven Packages</name>
     <url>https://maven.pkg.github.com/kai-niemi/cockroachdb-jdbc</url>
     <snapshots>
         <enabled>true</enabled>
@@ -212,11 +249,11 @@ Take note that the server and repository id's must match (it can be different th
 Now you should be able to build your own project with the JDBC driver as a dependency:
 
 ```shell
-mvn clean install
+./mvnw clean install
 ```
 
-Alternatively, you can just clone the repository and build it locally using `mvn install`. See
-the building section at the end of this page.
+Alternatively, you can just clone the repository and build it locally using `./mvnw install`. 
+See the building section at the end of this page.
 
 ## Modules
 
@@ -230,7 +267,7 @@ A standalone demo app to showcase the retry mechanism and other features.
 
 ### cockroachdb-jdbc-test
 
-Integration and functional tests activated via Maven profiles. See build section 
+Integration tests and functional tests activated via Maven profiles. See build section 
 further down in this page.
 
 ## Getting Help
@@ -343,9 +380,9 @@ variable in which case its scoped to the transaction.
 
 The qualifying requirements include:
 
-- Not used in a read-only connection
-- No time travel clause (`as of system time`)
-- No aggregate functions
+- Not a read-only transaction
+- No historical read / time travel clause (`as of system time`)
+- No aggregate functions (sum, avg, ..)
 - No group by or distinct operators
 - Not referencing internal table schema
 
