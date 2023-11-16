@@ -27,7 +27,7 @@ jobs:
       run: mvn -P test-coverage -B package --file pom.xml
    
     - name: JaCoCo Badge
-      uses: cicirello/jacoco-badge-generator@v2.6.1
+      uses: cicirello/jacoco-badge-generator@v2.11.0
       with:
         generate-branches-badge: true
         badges-directory: .github/badges
