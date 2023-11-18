@@ -88,6 +88,6 @@ while true; do
 esac
 done
 
-./mvnw --batch-mode gitflow:release \
+mvn --batch-mode gitflow:release \
     -DreleaseVersion=${releaseVersion} \
     -DdevelopmentVersion=${developmentVersion}
