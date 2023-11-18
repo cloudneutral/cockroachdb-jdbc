@@ -32,7 +32,7 @@ All the above are independent opt-in features disabled by default, except for da
 The default operational mode is therefore proxy pass-through mode where all client JDBC API invocations
 are delegated to the pgJDBC driver.
                    
-### Reducing Retries
+### Reducing Transaction Retries
 
 CockroachDB is a distributed SQL database that runs in serializable (1SR) isolation mode. As such, it's more
 prone to transient errors under contention scenarios or due to the complexities of data distribution 
@@ -50,7 +50,7 @@ on every qualified `SELECT` operation.
 For further information, see the [design notes](docs/DESIGN.md) of how the driver-level retries works and 
 its limitations. 
 
-### Speeding up bulk operations
+### Speeding up Bulk Operations
 
 The driver can rewrite batch `UPDATE`, `INSERT` and `UPSERT` DML statements to use SQL array un-nesting. 
 This will drastically improve performance for bulk operations that would otherwise pass single statements 
@@ -110,44 +110,9 @@ try (PreparedStatement ps = connection.prepareStatement(
 } catch (SQLException ex) {
 }
 ```
-      
-#### Limitations
 
-The driver's SQL parser uses a limited [SQL grammar](cockroachdb-jdbc-driver/src/main/resources/io/cockroachdb/jdbc/rewrite/CockroachParser.g4) for the rewrites, so there are limitations on 
-what type of CockroachDB DML statements (full [grammar](https://www.cockroachlabs.com/docs/stable/sql-grammar)) it supports. The basic SQL elements are 
-supported including scalar expressions, logical and binary expressions, function calls, type casts 
-and NULL expressions. That should include most ORM generated DML statements and a bit more. 
-
-If a more complex expression like window functions is used, the driver silently reverts to using 
-normal pass-through batch operations (meaning singleton statements).
-
-In addition, certain [PreparedStatement](https://docs.oracle.com/en/java/javase/17/docs/api/java.sql/java/sql/PreparedStatement.html) 
-methods invalidate rewrites when its obvious it's not a DML statements or otherwise does not 
-qualify for SQL arrays. 
-  
-Supported setter methods:
-
-- void setNull(int parameterIndex, int sqlType)     
-- void setBoolean(int parameterIndex, boolean x) 
-- void setByte(int parameterIndex, byte x) 
-- void setShort(int parameterIndex, short x) 
-- void setInt(int parameterIndex, int x) 
-- void setLong(int parameterIndex, long x) 
-- void setFloat(int parameterIndex, float x) 
-- void setDouble(int parameterIndex, double x) 
-- void setBigDecimal(int parameterIndex, BigDecimal x) 
-- void setString(int parameterIndex, String x) 
-- void setBytes(int parameterIndex, byte[] x) 
-- void setDate(int parameterIndex, Date x) 
-- void setTime(int parameterIndex, Time x) 
-- void setTimestamp(int parameterIndex, Timestamp x) 
-- void setObject(int parameterIndex, Object x, int targetSqlType) 
-- void setObject(int parameterIndex, Object x) 
-- void setRef(int parameterIndex, Ref x) 
-- void setArray(int parameterIndex, Array x) 
-- void setURL(int parameterIndex, URL x) 
-- void setNString(int parameterIndex, String value) 
-- void setSQLXML(int parameterIndex, SQLXML xmlObject) 
+For further information, see the [design notes](docs/DESIGN.md#limitations-of-bulk-operation-rewrites) 
+on bulk SQL statement rewrite limitations.
 
 ## Getting Started
 
@@ -215,7 +180,7 @@ Add this dependency to your `pom.xml` file:
 <dependency>
     <groupId>io.cockroachdb.jdbc</groupId>
     <artifactId>cockroachdb-jdbc-driver</artifactId>
-    <version>{version}</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
