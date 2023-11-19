@@ -39,7 +39,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
                         return null;
                     }
                     throw new UnsupportedOperationException("Not supposed to happen! " +
-                            "Please file a bug report:\nhttps://github.com/kai-niemi/cockroachdb-jdbc/issues");
+                            "Please file a bug report:\nhttps://github.com/cloudneutral/cockroachdb-jdbc/issues");
                 });
     }
 

@@ -1,8 +1,8 @@
 # CockroachDB JDBC Driver
 
-[![Java CI](https://github.com/kai-niemi/cockroachdb-jdbc/actions/workflows/maven-publish.yml/badge.svg?branch=main)](https://github.com/kai-niemi/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
-[![coverage](.github/badges/jacoco.svg)](https://github.com/kai-niemi/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
-[![branches coverage](.github/badges/branches.svg)](https://github.com/kai-niemi/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
+[![Java CI](https://github.com/cloudneutral/cockroachdb-jdbc/actions/workflows/maven-publish.yml/badge.svg?branch=main)](https://github.com/cloudneutral/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
+[![coverage](.github/badges/jacoco.svg)](https://github.com/cloudneutral/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
+[![branches coverage](.github/badges/branches.svg)](https://github.com/cloudneutral/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
 
 <img align="left" src="docs/logo.png" />
 
@@ -190,7 +190,7 @@ Then add the Maven repository to your `pom.xml` file (alternatively in Maven's [
 <repository>
     <id>github</id>
     <name>GitHub CockroachDB Apache Maven Packages</name>
-    <url>https://maven.pkg.github.com/kai-niemi/cockroachdb-jdbc</url>
+    <url>https://maven.pkg.github.com/cloudneutral/cockroachdb-jdbc</url>
     <snapshots>
         <enabled>true</enabled>
     </snapshots>
@@ -239,12 +239,12 @@ further down in this page.
 
 ### Reporting Issues
 
-This driver uses [GitHub](https://github.com/kai-niemi/cockroachdb-jdbc/issues) as issue tracking system
+This driver uses [GitHub](https://github.com/cloudneutral/cockroachdb-jdbc/issues) as issue tracking system
 to record bugs and feature requests. If you want to raise an issue, please follow the recommendations below:
 
-* Before you log a bug, please search the [issue tracker](https://github.com/kai-niemi/cockroachdb-jdbc/issues)
+* Before you log a bug, please search the [issue tracker](https://github.com/cloudneutral/cockroachdb-jdbc/issues)
   to see if someone has already reported the problem.
-* If the issue doesn't exist already, [create a new issue](https://github.com/kai-niemi/cockroachdb-jdbc/issues).
+* If the issue doesn't exist already, [create a new issue](https://github.com/cloudneutral/cockroachdb-jdbc/issues).
 * Please provide as much information as possible with the issue report, we like to know the version of Spring Data
   that you are using and JVM version, complete stack traces and any relevant configuration information.
 * If you need to paste code, or include a stack trace format it as code using triple backtick.
@@ -499,7 +499,7 @@ brew install openjdk@17
 ### Clone the project
 
 ```bash
-git clone git@github.com:kai-niemi/cockroachdb-jdbc.git
+git clone git@github.com:cloudneutral/cockroachdb-jdbc.git
 cd cockroachdb-jdbc
 ```
 

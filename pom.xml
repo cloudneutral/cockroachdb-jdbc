@@ -41,9 +41,9 @@
     </modules>
 
     <scm>
-        <connection>scm:git:git@github.com:kai-niemi/cockroachdb-jdbc.git</connection>
-        <developerConnection>scm:git:ssh://git@github.com:kai-niemi/cockroachdb-jdbc.git</developerConnection>
-        <url>https://github.com/kai-niemi/cockroachdb-jdbc.git</url>
+        <connection>scm:git:git@github.com:cloudneutral/cockroachdb-jdbc.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:cloudneutral/cockroachdb-jdbc.git</developerConnection>
+        <url>https://github.com/cloudneutral/cockroachdb-jdbc.git</url>
         <tag>HEAD</tag>
     </scm>
 
@@ -65,14 +65,14 @@
 
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/kai-niemi/cockroachdb-jdbc/issues</url>
+        <url>https://github.com/cloudneutral/cockroachdb-jdbc/issues</url>
     </issueManagement>
 
     <distributionManagement>
         <repository>
             <id>github</id>
             <name>GitHub CockroachDB Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/kai-niemi/cockroachdb-jdbc</url>
+            <url>https://maven.pkg.github.com/cloudneutral/cockroachdb-jdbc</url>
         </repository>
     </distributionManagement>
 
