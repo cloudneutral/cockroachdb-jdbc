@@ -4,6 +4,8 @@ import java.util.Properties;
 
 /**
  * A no-op retry listener.
+ *
+ * @author Kai Niemi
  */
 public class EmptyRetryListener implements RetryListener {
     @Override

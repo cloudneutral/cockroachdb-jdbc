@@ -2,6 +2,8 @@ package io.cockroachdb.jdbc;
 
 /**
  * Provides CockroachDB JDBC driver version metadata.
+ *
+ * @author Kai Niemi
  */
 public abstract class CockroachDriverInfo {
     private CockroachDriverInfo() {
@@ -9,9 +11,9 @@ public abstract class CockroachDriverInfo {
 
     public static final int MAJOR_VERSION = 1;
 
-    public static final int MINOR_VERSION = 1;
+    public static final int MINOR_VERSION = 2;
 
-    public static final int MICRO_VERSION = 1;
+    public static final int MICRO_VERSION = 0;
 
     public static final String DRIVER_NAME = "CockroachDB JDBC Driver";
 

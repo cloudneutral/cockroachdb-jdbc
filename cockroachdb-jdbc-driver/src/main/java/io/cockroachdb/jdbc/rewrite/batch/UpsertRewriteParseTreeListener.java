@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 
 /**
  * Parse tree listener for rewriting UPSERT statements to use batch arrays.
+ *
+ * @author Kai Niemi
  */
 public class UpsertRewriteParseTreeListener extends AbstractCockroachParserListener {
     private final List<String> columnNames = new ArrayList<>();

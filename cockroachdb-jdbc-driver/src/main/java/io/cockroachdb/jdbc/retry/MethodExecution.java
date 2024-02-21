@@ -7,6 +7,8 @@ import java.util.Arrays;
 
 /**
  * Execution context for JDBC method calls.
+ *
+ * @author Kai Niemi
  */
 public class MethodExecution {
     public static Builder builder() {

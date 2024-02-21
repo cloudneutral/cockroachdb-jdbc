@@ -3,6 +3,11 @@ package io.cockroachdb.jdbc.util;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Utility for parsing CockroachDB version strings.
+ *
+ * @author Kai Niemi
+ */
 public final class CalendarVersion {
     private static final Pattern CALENDAR_VERSIONING = Pattern.compile(
             "CockroachDB CCL v(\\d+)\\.(\\d+)\\.(\\d+(.+)?)\\s\\(.*");

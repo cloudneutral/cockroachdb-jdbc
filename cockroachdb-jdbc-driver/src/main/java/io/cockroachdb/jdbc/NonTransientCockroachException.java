@@ -6,6 +6,8 @@ import org.postgresql.util.PSQLState;
 
 /**
  * A CockroachDB JDBC driver specific non-transient SQL exception type.
+ *
+ * @author Kai Niemi
  */
 public abstract class NonTransientCockroachException extends SQLNonTransientException {
     public NonTransientCockroachException(String msg, PSQLState state) {

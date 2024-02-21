@@ -7,6 +7,8 @@ import org.antlr.v4.runtime.misc.Interval;
 /**
  * Exception thrown when an expression violates the grammar or cannot
  * be compiled.
+ *
+ * @author Kai Niemi
  */
 public class SQLParseException extends RuntimeException {
     public static SQLParseException from(String message, Parser parser) {

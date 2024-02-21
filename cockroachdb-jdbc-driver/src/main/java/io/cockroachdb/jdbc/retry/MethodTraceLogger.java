@@ -11,6 +11,11 @@ import org.slf4j.Logger;
 import io.cockroachdb.jdbc.util.ExceptionUtils;
 import io.cockroachdb.jdbc.util.TraceUtils;
 
+/**
+ * Helper class for method level logging.
+ *
+ * @author Kai Niemi
+ */
 public class MethodTraceLogger {
     private static final AtomicLong sequenceNumber = new AtomicLong(0);
 

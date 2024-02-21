@@ -9,6 +9,12 @@ import java.util.List;
 
 import io.cockroachdb.jdbc.util.Assert;
 
+/**
+ * Abstract class for JDBC retry interceptors.
+ *
+ * @param <T> the delegate type
+ * @author Kai Niemi
+ */
 public abstract class AbstractRetryInterceptor<T> extends AbstractInterceptor<T> {
     private MethodTraceLogger methodTraceLogger;
 

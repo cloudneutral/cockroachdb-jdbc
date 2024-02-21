@@ -12,6 +12,8 @@ import io.cockroachdb.jdbc.util.Assert;
 
 /**
  * A query processor that appends {@code FOR UPDATE} to SELECT queries when qualified.
+ *
+ * @author Kai Niemi
  */
 public class SelectForUpdateProcessor implements QueryProcessor {
     /**

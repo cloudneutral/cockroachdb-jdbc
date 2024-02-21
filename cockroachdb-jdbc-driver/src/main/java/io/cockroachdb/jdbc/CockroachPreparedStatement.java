@@ -12,6 +12,8 @@ import io.cockroachdb.jdbc.util.WrapperSupport;
 /**
  * A {@code java.sql.PreparedStatement} implementation for CockroachDB, wrapping an underlying PgStatement
  * or proxy.
+ *
+ * @author Kai Niemi
  */
 public class CockroachPreparedStatement extends WrapperSupport<PreparedStatement> implements PreparedStatement {
     public CockroachPreparedStatement(PreparedStatement delegate) {

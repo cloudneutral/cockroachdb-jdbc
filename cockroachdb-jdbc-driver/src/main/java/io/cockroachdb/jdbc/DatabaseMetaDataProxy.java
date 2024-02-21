@@ -12,6 +12,12 @@ import java.util.Optional;
 
 import io.cockroachdb.jdbc.util.CalendarVersion;
 
+/**
+ * An interceptor for {@code java.sql.DatabaseMetaData} that overrides a few methods
+ * to provide CockroachDB related metadata.
+ *
+ * @author Kai Niemi
+ */
 public class DatabaseMetaDataProxy implements InvocationHandler {
     public static DatabaseMetaData proxy(DatabaseMetaData delegate) {
         return (DatabaseMetaData) Proxy.newProxyInstance(

@@ -26,6 +26,8 @@ import io.cockroachdb.jdbc.retry.RetryStrategy;
 /**
  * A {@code java.sql.Driver} implementation for CockroachDB, wrapping an underlying
  * {@code org.postgresql.Driver} delegate.
+ *
+ * @author Kai Niemi
  */
 public class CockroachDriver implements Driver {
     public static final String DRIVER_PREFIX = "jdbc:cockroachdb";

@@ -1,5 +1,10 @@
 package io.cockroachdb.jdbc.util;
 
+/**
+ * Hex encoding and decoding helper.
+ *
+ * @author Kai Niemi
+ */
 public abstract class HexUtils {
     private HexUtils() {
     }

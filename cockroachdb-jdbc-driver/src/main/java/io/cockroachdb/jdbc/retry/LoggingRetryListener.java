@@ -16,6 +16,8 @@ import io.cockroachdb.jdbc.util.ExceptionUtils;
 
 /**
  * Retry listener delegating to a logger.
+ *
+ * @author Kai Niemi
  */
 public class LoggingRetryListener implements RetryListener {
     private final AtomicInteger totalSuccess = new AtomicInteger();

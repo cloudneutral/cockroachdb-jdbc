@@ -9,6 +9,8 @@ import io.cockroachdb.jdbc.retry.RetryStrategy;
 
 /**
  * Value object for JDBC connection settings.
+ *
+ * @author Kai Niemi
  */
 @SuppressWarnings("UnusedReturnValue")
 public class ConnectionSettings {

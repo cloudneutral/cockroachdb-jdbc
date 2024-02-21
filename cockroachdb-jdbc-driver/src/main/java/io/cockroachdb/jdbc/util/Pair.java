@@ -2,6 +2,12 @@ package io.cockroachdb.jdbc.util;
 
 import java.util.Objects;
 
+/**
+ * A simple value tuple holder.
+ *
+ * @param <F> first type
+ * @param <S> second type
+ */
 public class Pair<F, S> {
     public static <F, S> Pair<F, S> of(F first, S second) {
         return new Pair<>(first, second);

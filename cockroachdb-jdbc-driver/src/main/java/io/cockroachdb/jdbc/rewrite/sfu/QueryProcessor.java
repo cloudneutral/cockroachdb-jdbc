@@ -4,7 +4,9 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 /**
- * Interface representing a SQL query processor for rewriting queries.
+ * Interface representing a SQL query processor for rewrites.
+ *
+ * @author Kai Niemi
  */
 public interface QueryProcessor {
     /**

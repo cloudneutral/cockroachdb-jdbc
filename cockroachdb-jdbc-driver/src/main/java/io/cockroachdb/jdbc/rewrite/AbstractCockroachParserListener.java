@@ -7,6 +7,11 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
+/**
+ * Abstract base class for Cockroach SQL parser listeners for rewrites.
+ *
+ * @author Kai Niemi
+ */
 public abstract class AbstractCockroachParserListener extends CockroachParserBaseListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 

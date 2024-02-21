@@ -8,6 +8,12 @@ import org.slf4j.LoggerFactory;
 
 import io.cockroachdb.jdbc.util.Assert;
 
+/**
+ * Abstract class for JDBC resource interceptors.
+ *
+ * @param <T> the delegate type
+ * @author Kai Niemi
+ */
 public abstract class AbstractInterceptor<T> implements InvocationHandler {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 

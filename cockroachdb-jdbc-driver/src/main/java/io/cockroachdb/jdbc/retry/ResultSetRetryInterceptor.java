@@ -19,6 +19,11 @@ import java.util.UUID;
 import io.cockroachdb.jdbc.util.Checksum;
 import io.cockroachdb.jdbc.util.StreamUtils;
 
+/**
+ * An interceptor for {@code java.sql.ResultSet} with retry capability.
+ *
+ * @author Kai Niemi
+ */
 public class ResultSetRetryInterceptor extends AbstractRetryInterceptor<ResultSet> implements InvocationHandler {
     public static ResultSet proxy(ResultSet resultSet, ConnectionRetryInterceptor connectionInterceptor) {
         return (ResultSet) Proxy.newProxyInstance(

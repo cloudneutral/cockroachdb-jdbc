@@ -3,6 +3,11 @@ package io.cockroachdb.jdbc.util;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * Helper for message digests / checksums.
+ *
+ * @author Kai Niemi
+ */
 @SuppressWarnings("ALL")
 public class Checksum {
     public static Checksum sha256() {

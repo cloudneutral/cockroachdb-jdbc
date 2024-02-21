@@ -10,6 +10,8 @@ import java.util.Properties;
  *
  * <p>This is intended for internal use by the CockroachDB JDBC driver.
  * See {@link ExponentialBackoffRetryStrategy}.
+ *
+ * @author Kai Niemi
  */
 public interface RetryStrategy {
     /**

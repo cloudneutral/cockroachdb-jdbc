@@ -5,6 +5,8 @@ import java.util.Properties;
 
 /**
  * Enum of CockroachDB JDBC driver properties.
+ *
+ * @author Kai Niemi
  */
 public enum CockroachProperty {
     RETRY_TRANSIENT_ERRORS(

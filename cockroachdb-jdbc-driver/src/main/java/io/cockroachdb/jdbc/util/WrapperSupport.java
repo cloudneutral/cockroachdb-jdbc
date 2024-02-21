@@ -6,6 +6,12 @@ import java.sql.Wrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Abstract class for resource wrappers.
+ *
+ * @param <D> the delegate type
+ * @author Kai Niemi
+ */
 public abstract class WrapperSupport<D> implements Wrapper {
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 

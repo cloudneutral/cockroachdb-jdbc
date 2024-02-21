@@ -17,6 +17,8 @@ import io.cockroachdb.jdbc.util.WrapperSupport;
 /**
  * A {@code java.sql.Statement} implementation for CockroachDB, wrapping an underlying PgStatement
  * or proxy.
+ *
+ * @author Kai Niemi
  */
 public class CockroachStatement extends WrapperSupport<Statement> implements Statement {
     private static final Pattern SET_IMPLICIT_SFU = Pattern.compile(
@@ -105,7 +107,7 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
         Matcher matcher = SET_IMPLICIT_SFU.matcher(sql);
         if (matcher.matches()) {
             if (getConnection().getAutoCommit()) {
-                throw new InvalidConnectionException(
+                throw new ConnectionInvalidException(
                         "Implicit select-for-update requires explicit transactions (autoCommit=false)",
                         PSQLState.TRANSACTION_STATE_INVALID);
             }

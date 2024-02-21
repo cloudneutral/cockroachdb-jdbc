@@ -7,6 +7,8 @@ import java.util.regex.Pattern;
 
 /**
  * Utility for formatting and parsing Duration's.
+ *
+ * @author Kai Niemi
  */
 public abstract class DurationFormat {
     private static final Pattern DURATION_PATTERN = Pattern.compile("([0-9]+)\\s*([smhdw]+)", Pattern.CASE_INSENSITIVE);

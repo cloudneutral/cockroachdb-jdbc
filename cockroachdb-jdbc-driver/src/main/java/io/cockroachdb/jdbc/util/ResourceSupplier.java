@@ -7,6 +7,7 @@ import java.sql.SQLException;
  * JDBC resources that may throw SQLExceptions.
  *
  * @param <T> type of resource to supply
+ * @author Kai Niemi
  */
 @FunctionalInterface
 public interface ResourceSupplier<T> {

@@ -13,6 +13,8 @@ import io.cockroachdb.jdbc.util.WrapperSupport;
 /**
  * A {@code java.sql.ResultSet} implementation for CockroachDB, wrapping an underlying PgResultSet
  * or proxy.
+ *
+ * @author Kai Niemi
  */
 public class CockroachResultSet extends WrapperSupport<ResultSet> implements ResultSet {
     public CockroachResultSet(ResultSet delegate) {

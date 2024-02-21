@@ -95,7 +95,7 @@ public class CockroachStatementTest {
 
         Assertions.assertEquals(SelectForUpdateProcessor.INSTANCE, connectionSettings.getQueryProcessor());
 
-        Assertions.assertThrowsExactly(InvalidConnectionException.class, () -> {
+        Assertions.assertThrowsExactly(ConnectionInvalidException.class, () -> {
             statementUnderTest.execute("SET implicitSelectForUpdate=true");
         });
     }
@@ -117,7 +117,7 @@ public class CockroachStatementTest {
 
         Assertions.assertEquals(SelectForUpdateProcessor.PASS_THROUGH, connectionSettings.getQueryProcessor());
 
-        Assertions.assertThrowsExactly(InvalidConnectionException.class, () -> {
+        Assertions.assertThrowsExactly(ConnectionInvalidException.class, () -> {
             statementUnderTest.execute("SET implicitSelectForUpdate=true");
         });
     }

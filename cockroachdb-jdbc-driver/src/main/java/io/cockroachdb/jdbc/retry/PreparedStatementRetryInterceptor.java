@@ -8,6 +8,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.Instant;
 
+/**
+ * An interceptor for {@code java.sql.PreparedStatement} with retry capability.
+ *
+ * @author Kai Niemi
+ */
 public class PreparedStatementRetryInterceptor extends AbstractRetryInterceptor<PreparedStatement>
         implements InvocationHandler {
     public static PreparedStatement proxy(PreparedStatement delegate,

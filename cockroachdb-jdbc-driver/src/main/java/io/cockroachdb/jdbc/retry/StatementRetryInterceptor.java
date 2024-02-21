@@ -10,6 +10,11 @@ import java.time.Instant;
 
 import io.cockroachdb.jdbc.CockroachResultSet;
 
+/**
+ * An interceptor for {@code java.sql.Statement} with retry capability.
+ *
+ * @author Kai Niemi
+ */
 public class StatementRetryInterceptor extends AbstractRetryInterceptor<Statement> implements InvocationHandler {
     public static Statement proxy(Statement delegate, ConnectionRetryInterceptor connectionInterceptor) {
         return (Statement) Proxy.newProxyInstance(

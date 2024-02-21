@@ -3,6 +3,11 @@ package io.cockroachdb.jdbc.util;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
+/**
+ * Method tracing debug utils.
+ *
+ * @author Kai Niemi
+ */
 public abstract class TraceUtils {
     private TraceUtils() {
     }

@@ -13,6 +13,8 @@ import io.cockroachdb.jdbc.util.DurationFormat;
 
 /**
  * Default implementation of a retry strategy using exponential backoff with jitter.
+ *
+ * @author Kai Niemi
  */
 public class ExponentialBackoffRetryStrategy implements RetryStrategy {
     private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();

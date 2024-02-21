@@ -9,12 +9,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
-import static io.cockroachdb.jdbc.rewrite.CockroachParserFactory.rewriteUpdateStatement;
-
 /**
  * A {@code java.sql.Connection} implementation for CockroachDB, wrapping an underlying {@code PGConnection}.
  * Mostly acts a pass-through wrapper optionally rewriting SELECT queries and wrapping
  * statement's and preparedStatement's.
+ *
+ * @author Kai Niemi
  */
 public class CockroachConnection extends WrapperSupport<Connection> implements Connection {
     private final ConnectionSettings connectionSettings;

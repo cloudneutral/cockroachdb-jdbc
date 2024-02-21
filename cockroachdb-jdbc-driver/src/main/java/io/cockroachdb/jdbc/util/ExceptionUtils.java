@@ -6,6 +6,11 @@ import java.util.EnumSet;
 
 import org.postgresql.util.PSQLState;
 
+/**
+ * Exception helper functions.
+ *
+ * @author Kai Niemi
+ */
 public abstract class ExceptionUtils {
     private static EnumSet<PSQLState> PSQL_STATES = EnumSet.allOf(PSQLState.class);
 

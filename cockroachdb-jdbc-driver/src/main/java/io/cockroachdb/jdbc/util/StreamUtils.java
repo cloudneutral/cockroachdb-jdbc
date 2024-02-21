@@ -4,6 +4,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 
+/**
+ * Java NIO stream drains.
+ *
+ * @author Kai Niemi
+ */
 public abstract class StreamUtils {
     private StreamUtils() {
     }

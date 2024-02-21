@@ -11,6 +11,8 @@ import java.util.function.Consumer;
 
 /**
  * Parse tree listener for rewriting INSERT statements to use batch arrays.
+ *
+ * @author Kai Niemi
  */
 public class InsertRewriteParseTreeListener extends AbstractCockroachParserListener {
     private final List<String> columnNames = new ArrayList<>();

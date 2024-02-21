@@ -5,13 +5,19 @@ import io.cockroachdb.jdbc.rewrite.CockroachParser;
 import io.cockroachdb.jdbc.rewrite.SQLParseException;
 import io.cockroachdb.jdbc.util.Pair;
 
-import java.math.BigDecimal;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
  * Parse tree listener for rewriting UPDATE statements to use batch arrays.
+ *
+ * @author Kai Niemi
  */
 public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListener {
     private final List<Pair<String, String>> setClauseList = new ArrayList<>();
@@ -179,7 +185,8 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
 
         if (ctx.PLUS() != null) {
             push(left + " + " + right, ctx);
-        } if (ctx.MINUS() != null) {
+        }
+        if (ctx.MINUS() != null) {
             push(left + " - " + right, ctx);
         }
     }

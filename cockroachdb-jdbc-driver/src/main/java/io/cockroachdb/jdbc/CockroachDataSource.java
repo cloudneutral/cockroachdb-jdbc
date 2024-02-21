@@ -20,6 +20,8 @@ import io.cockroachdb.jdbc.util.DurationFormat;
 
 /**
  * A simple, non-pooled {@code java.sql.DataSource} implementation for CockroachDB.
+ *
+ * @author Kai Niemi
  */
 public class CockroachDataSource implements DataSource, CommonDataSource, Closeable {
     @FunctionalInterface

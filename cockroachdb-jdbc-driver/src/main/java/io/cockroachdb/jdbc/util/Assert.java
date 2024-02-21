@@ -1,5 +1,10 @@
 package io.cockroachdb.jdbc.util;
 
+/**
+ * Basic assertion methods.
+ *
+ * @author Kai Niemi
+ */
 public abstract class Assert {
     private Assert() {
     }

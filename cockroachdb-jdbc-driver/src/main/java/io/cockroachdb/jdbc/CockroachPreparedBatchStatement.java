@@ -1,7 +1,7 @@
 package io.cockroachdb.jdbc;
 
-import io.cockroachdb.jdbc.util.CallableSQLOperation;
 import io.cockroachdb.jdbc.util.Pair;
+import io.cockroachdb.jdbc.util.ResourceSupplier;
 import io.cockroachdb.jdbc.util.WrapperSupport;
 
 import java.io.InputStream;
@@ -25,6 +25,8 @@ import java.util.*;
  * <p>
  * The pgJDBC has a hard batch size limit of 128 for rewriting INSERT statements. It doesn't rewrite UPSERTs
  * or UPDATES. Using this approach removes these limitations.
+ *
+ * @author Kai Niemi
  */
 public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStatement> implements PreparedStatement {
     static PreparedStatement emptyProxyDelegate() {
@@ -54,7 +56,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
     private final List<Pair<String, List<Object>>> columnValues = new ArrayList<>();
 
     private static class ParameterRecord {
-        CallableSQLOperation<?> operation;
+        ResourceSupplier<?> operation;
         String sqlType;
         Object value;
     }
@@ -67,12 +69,12 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         this.batchQuery = batchQuery;
     }
 
-    private void addRowSetter(int parameterIndex, CallableSQLOperation<?> operation, int sqlType, Object value)
+    private void addRowSetter(int parameterIndex, ResourceSupplier<?> operation, int sqlType, Object value)
             throws SQLException {
         addRowSetter(parameterIndex, operation, JDBCType.valueOf(sqlType).getName(), value);
     }
 
-    private <T> void addRowSetter(int parameterIndex, CallableSQLOperation<?> operation, String sqlType, T value)
+    private <T> void addRowSetter(int parameterIndex, ResourceSupplier<?> operation, String sqlType, T value)
             throws SQLException {
         if (isBatchRewriteVoided()) {
             throw new IllegalStateException();
@@ -166,7 +168,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             // Invoke all deferred setXX calls
             try {
                 for (ParameterRecord record : parameterRecords) {
-                    record.operation.call();
+                    record.operation.get();
                 }
             } finally {
                 parameterRecords.clear();

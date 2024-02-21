@@ -17,7 +17,7 @@ import org.slf4j.MDC;
 import io.cockroachdb.jdbc.CockroachPreparedStatement;
 import io.cockroachdb.jdbc.CockroachStatement;
 import io.cockroachdb.jdbc.ConnectionSettings;
-import io.cockroachdb.jdbc.InvalidConnectionException;
+import io.cockroachdb.jdbc.ConnectionInvalidException;
 import io.cockroachdb.jdbc.util.Assert;
 import io.cockroachdb.jdbc.util.ExceptionUtils;
 import io.cockroachdb.jdbc.util.ResourceSupplier;
@@ -26,6 +26,8 @@ import io.cockroachdb.jdbc.util.ResourceSupplier;
  * A dynamic proxy interceptor / invocation handler around java.sql.Connection. This interceptor
  * provides the main retry logic for all retryable SQL exception that may surface at commit time
  * or from any associated statements or result sets.
+ *
+ * @author Kai Niemi
  */
 public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connection> {
     public static Connection proxy(Connection connection,
@@ -222,11 +224,11 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
         logger.debug("Opening new connection for attempt [{}]", attempt);
         Connection newDelegate = connectionSupplier.get();
         if (newDelegate.getAutoCommit()) {
-            throw new InvalidConnectionException("Connection is in auto-commit mode",
+            throw new ConnectionInvalidException("Connection is in auto-commit mode",
                     PSQLState.UNEXPECTED_ERROR);
         }
         if (!newDelegate.isValid(10)) {
-            throw new InvalidConnectionException("Connection is invalid",
+            throw new ConnectionInvalidException("Connection is invalid",
                     PSQLState.CONNECTION_UNABLE_TO_CONNECT);
         }
         SQLWarning warning = newDelegate.getWarnings();
