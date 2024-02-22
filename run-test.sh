@@ -24,12 +24,25 @@ fn_echo(){
 	echo -en "\n"
 }
 
+fn_echo_y(){
+  echo -en "${creeol}${yellow}$@${default}"
+	echo -en "\n"
+}
+
 fn_select_group() {
   PS3='Please enter integration test group tag (-Dgroups): '
-  options=("anomaly-test" "connection-retry-test" "batch-insert-test" "batch-update-test" "batch-rewrite-test" "QUIT")
+  options=("all-test" "anomaly-test" "connection-retry-test" "batch-insert-test" "batch-update-test" "batch-rewrite-test" "QUIT")
   select opt in "${options[@]}"
   do
       case $opt in
+          "all-test")
+                groups=$opt
+                break
+                ;;
+          "anomaly-test")
+              groups=$opt
+              break
+              ;;
           "connection-retry-test")
               groups=$opt
               break
@@ -46,10 +59,6 @@ fn_select_group() {
               groups=$opt
               break
               ;;
-          "anomaly-test")
-              groups=$opt
-              break
-              ;;
           "QUIT")
               exit 0
               ;;
@@ -60,21 +69,21 @@ fn_select_group() {
 
 fn_select_profile() {
   PS3='Please enter integration test Maven profile (-P): '
-  options=("test-local" "test-dev" "test-cloud" "QUIT")
+  options=("it-local" "it-dev" "it-cloud" "QUIT")
   select opt in "${options[@]}"
   do
       case $opt in
-          "test-local")
+          "it-local")
               profile=$opt
               fn_select_group
               break
               ;;
-          "test-dev")
+          "it-dev")
               profile=$opt
               fn_select_group
               break
               ;;
-          "test-cloud")
+          "it-cloud")
               profile=$opt
               fn_select_group
               break
@@ -89,17 +98,17 @@ fn_select_profile() {
 }
 
 ################################
-################################
-################################
 
-profile=it
+profile=
 groups=
-
-fn_echo "** Integration Test Menu **"
 
 fn_select_profile
 
 fn_echo "Maven Profile: $profile"
 fn_echo "Test Group(s): $groups"
 
+echo ./mvnw -P "$profile" -Dgroups="$groups" clean install
+fn_echo_y "Starting in 5s.."
+
+sleep 5
 ./mvnw -P "$profile" -Dgroups="$groups" clean install

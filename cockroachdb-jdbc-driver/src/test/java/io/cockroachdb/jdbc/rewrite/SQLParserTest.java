@@ -1,17 +1,20 @@
-package io.cockroachdb.jdbc.rewrite.batch;
+package io.cockroachdb.jdbc.rewrite;
 
 import io.cockroachdb.jdbc.VariableSource;
-import io.cockroachdb.jdbc.rewrite.CockroachParserFactory;
-import io.cockroachdb.jdbc.rewrite.SQLParseException;
+import io.cockroachdb.jdbc.parser.SQLParseException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 
 import java.util.stream.Stream;
 
-@Tag("unit-test")
-public class SQLExpressionsTest {
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
+public class SQLParserTest {
     public static final Stream<Arguments> inserts = Stream.of(
             Arguments.of(true, "insert into t (a,b) values (?,?)"),
             Arguments.of(true, "insert into t (a,b) values (?::int,?::bool)"),
@@ -67,14 +70,14 @@ public class SQLExpressionsTest {
     @ParameterizedTest
     @VariableSource("inserts")
     public void givenInsertStatement_expectRewriteIfValid(boolean valid, String before) {
-        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedInsertStatement(before), before);
+        Assertions.assertEquals(valid, BatchRewriteProcessor.isQualifiedInsertStatement(before), before);
         if (valid) {
-            String after = CockroachParserFactory.rewriteInsertStatement(before);
+            String after = BatchRewriteProcessor.rewriteInsertStatement(before);
             System.out.println(after);
             Assertions.assertNotEquals(before, after);
         } else {
             Assertions.assertThrowsExactly(SQLParseException.class, () -> {
-                CockroachParserFactory.rewriteInsertStatement(before);
+                BatchRewriteProcessor.rewriteInsertStatement(before);
             });
         }
     }
@@ -82,14 +85,14 @@ public class SQLExpressionsTest {
     @ParameterizedTest
     @VariableSource("upserts")
     public void givenUpsertStatement_expectRewriteIfValid(boolean valid, String before) {
-        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedUpsertStatement(before), before);
+        Assertions.assertEquals(valid, BatchRewriteProcessor.isQualifiedUpsertStatement(before), before);
         if (valid) {
-            String after = CockroachParserFactory.rewriteUpsertStatement(before);
+            String after = BatchRewriteProcessor.rewriteUpsertStatement(before);
             System.out.println(after);
             Assertions.assertNotEquals(before, after);
         } else {
             Assertions.assertThrowsExactly(SQLParseException.class, () -> {
-                CockroachParserFactory.rewriteUpsertStatement(before);
+                BatchRewriteProcessor.rewriteUpsertStatement(before);
             });
         }
     }
@@ -97,14 +100,14 @@ public class SQLExpressionsTest {
     @ParameterizedTest
     @VariableSource("updates")
     public void givenUpdateStatement_expectRewriteIfValid(boolean valid, String before) {
-        Assertions.assertEquals(valid, CockroachParserFactory.isQualifiedUpdateStatement(before), before);
+        Assertions.assertEquals(valid, BatchRewriteProcessor.isQualifiedUpdateStatement(before), before);
         if (valid) {
-            String after = CockroachParserFactory.rewriteUpdateStatement(before);
+            String after = BatchRewriteProcessor.rewriteUpdateStatement(before);
             System.out.println(after);
             Assertions.assertNotEquals(before, after);
         } else {
             Assertions.assertThrowsExactly(SQLParseException.class, () -> {
-                CockroachParserFactory.rewriteUpdateStatement(before);
+                BatchRewriteProcessor.rewriteUpdateStatement(before);
             });
         }
     }

@@ -2,7 +2,7 @@ package io.cockroachdb.jdbc;
 
 import java.util.Optional;
 
-import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
+import io.cockroachdb.jdbc.rewrite.QueryProcessor;
 import io.cockroachdb.jdbc.retry.MethodTraceLogger;
 import io.cockroachdb.jdbc.retry.RetryListener;
 import io.cockroachdb.jdbc.retry.RetryStrategy;

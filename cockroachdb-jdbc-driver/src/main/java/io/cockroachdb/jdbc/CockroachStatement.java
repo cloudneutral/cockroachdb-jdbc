@@ -10,8 +10,8 @@ import java.util.regex.Pattern;
 
 import org.postgresql.util.PSQLState;
 
-import io.cockroachdb.jdbc.rewrite.sfu.QueryProcessor;
-import io.cockroachdb.jdbc.rewrite.sfu.SelectForUpdateProcessor;
+import io.cockroachdb.jdbc.rewrite.QueryProcessor;
+import io.cockroachdb.jdbc.rewrite.SelectForUpdateProcessor;
 import io.cockroachdb.jdbc.util.WrapperSupport;
 
 /**

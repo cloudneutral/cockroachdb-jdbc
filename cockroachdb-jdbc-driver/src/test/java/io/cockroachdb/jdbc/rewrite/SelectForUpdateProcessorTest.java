@@ -1,8 +1,11 @@
-package io.cockroachdb.jdbc.rewrite.sfu;
+package io.cockroachdb.jdbc.rewrite;
 
 import io.cockroachdb.jdbc.VariableSource;
+import io.cockroachdb.jdbc.rewrite.QueryProcessor;
+import io.cockroachdb.jdbc.rewrite.SelectForUpdateProcessor;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -12,7 +15,10 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.stream.Stream;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class SelectForUpdateProcessorTest {
     public static final Stream<Arguments> queries = Stream.of(
             Arguments.of(false, "select sum(1+2)"),

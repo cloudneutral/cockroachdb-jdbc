@@ -23,7 +23,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
-@Tag("batch-rewrite-test")
+@Order(3)
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("batch-rewrite-test")
+})
 @DatabaseFixture(beforeTestScript = "db/batch/product-ddl.sql")
 public class BatchRewriteTest extends AbstractIntegrationTest {
     private static final int BATCH_SIZE = 32;

@@ -2,9 +2,9 @@
     Simplified ANLTR4 grammar for CockroachDB DML statements for the
     purpose of batch array rewrites.
  */
-parser grammar CockroachParser;
+parser grammar CockroachSQLParser;
 
-options { tokenVocab = CockroachLexer; }
+options { tokenVocab = CockroachSQLLexer; }
 
 // Parser rules
 

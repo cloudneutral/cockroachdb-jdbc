@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.ClassOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.TestClassOrder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -29,7 +30,10 @@ import io.cockroachdb.jdbc.test.PrettyText;
 
 @TestClassOrder(ClassOrderer.OrderAnnotation.class)
 @Order(2)
-@Tag("batch-update-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("batch-update-test")
+})
 @DatabaseFixture(beforeTestScript = "db/batch/product-ddl.sql")
 public class BatchUpdateTest extends AbstractIntegrationTest {
     private static final int PRODUCTS_PER_BATCH_COUNT = 10_000;
@@ -164,5 +168,4 @@ public class BatchUpdateTest extends AbstractIntegrationTest {
         }
 
     }
-
 }

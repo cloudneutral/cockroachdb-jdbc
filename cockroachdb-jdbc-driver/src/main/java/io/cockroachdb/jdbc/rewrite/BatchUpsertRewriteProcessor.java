@@ -1,7 +1,7 @@
-package io.cockroachdb.jdbc.rewrite.batch;
+package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.rewrite.AbstractCockroachParserListener;
-import io.cockroachdb.jdbc.rewrite.CockroachParser;
+import io.cockroachdb.jdbc.parser.AbstractSQLParserListener;
+import io.cockroachdb.jdbc.parser.CockroachSQLParser;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -14,7 +14,7 @@ import java.util.function.Consumer;
  *
  * @author Kai Niemi
  */
-public class UpsertRewriteParseTreeListener extends AbstractCockroachParserListener {
+public class BatchUpsertRewriteProcessor extends AbstractSQLParserListener {
     private final List<String> columnNames = new ArrayList<>();
 
     private final List<String> columnValues = new ArrayList<>();
@@ -23,12 +23,12 @@ public class UpsertRewriteParseTreeListener extends AbstractCockroachParserListe
 
     private final Consumer<String> consumer;
 
-    public UpsertRewriteParseTreeListener(Consumer<String> consumer) {
+    public BatchUpsertRewriteProcessor(Consumer<String> consumer) {
         this.consumer = consumer;
     }
 
     @Override
-    public void exitUpsertStatement(CockroachParser.UpsertStatementContext ctx) {
+    public void exitUpsertStatement(CockroachSQLParser.UpsertStatementContext ctx) {
         StringBuilder sb = new StringBuilder();
         sb.append("upsert into ")
                 .append(tableName)
@@ -63,42 +63,42 @@ public class UpsertRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitTableName(CockroachParser.TableNameContext ctx) {
+    public void exitTableName(CockroachSQLParser.TableNameContext ctx) {
         this.tableName = ctx.getText();
     }
 
     @Override
-    public void exitColumnName(CockroachParser.ColumnNameContext ctx) {
-        if (!(ctx.getParent() instanceof CockroachParser.OptionalConflictExpressionContext)) {
+    public void exitColumnName(CockroachSQLParser.ColumnNameContext ctx) {
+        if (!(ctx.getParent() instanceof CockroachSQLParser.OptionalConflictExpressionContext)) {
             columnNames.add(pop(String.class, ctx));
         }
     }
 
     @Override
-    public void exitValueList(CockroachParser.ValueListContext ctx) {
+    public void exitValueList(CockroachSQLParser.ValueListContext ctx) {
         ctx.atomList().atom()
                 .forEach(atomContext -> columnValues.add(pop(String.class, ctx)));
     }
 
     @Override
-    public void exitLiteral(CockroachParser.LiteralContext ctx) {
+    public void exitLiteral(CockroachSQLParser.LiteralContext ctx) {
         push(ctx.getText(), ctx);
     }
 
     @Override
-    public void exitIdentifier(CockroachParser.IdentifierContext ctx) {
-        if (!(ctx.getParent() instanceof CockroachParser.FunctionNameContext)) {
+    public void exitIdentifier(CockroachSQLParser.IdentifierContext ctx) {
+        if (!(ctx.getParent() instanceof CockroachSQLParser.FunctionNameContext)) {
             push(ctx.getText(), ctx);
         }
     }
 
     @Override
-    public void exitPlaceholder(CockroachParser.PlaceholderContext ctx) {
+    public void exitPlaceholder(CockroachSQLParser.PlaceholderContext ctx) {
         push(ctx.getText(), ctx);
     }
 
     @Override
-    public void exitFunctionCall(CockroachParser.FunctionCallContext ctx) {
+    public void exitFunctionCall(CockroachSQLParser.FunctionCallContext ctx) {
         String fnName = ctx.functionName().getText();
 
         List<String> args = new ArrayList<>();
@@ -126,7 +126,7 @@ public class UpsertRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitNestedExpression(CockroachParser.NestedExpressionContext ctx) {
+    public void exitNestedExpression(CockroachSQLParser.NestedExpressionContext ctx) {
         String expr = pop(String.class, ctx);
         push("(" + expr + ")", ctx);
     }

@@ -8,10 +8,14 @@ import java.sql.SQLException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class DatabaseMetaDataProxyTest {
     @Test
     public void whenInspectingDatabaseMetadaata_expectCockroachDBMetadata() throws SQLException {

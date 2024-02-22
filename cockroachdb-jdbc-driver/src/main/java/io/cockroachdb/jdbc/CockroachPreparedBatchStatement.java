@@ -152,8 +152,8 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     private PreparedStatement getDelegate(String source) throws SQLException {
         if (Proxy.isProxyClass(super.getDelegate().getClass())) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Invalidating batch rewrite due to '{}' and replaying {} recorded ops",
+            if (logger.isTraceEnabled()) {
+                logger.trace("Invalidating batch rewrite due to '{}' and replaying {} recorded ops",
                         source, parameterRecords.size());
             }
         }

@@ -79,7 +79,7 @@
     <profiles>
         <!-- Integration tests matching group tags -->
         <profile>
-            <id>test-local</id>
+            <id>it-local</id>
             <build>
                 <plugins>
                     <plugin>
@@ -88,7 +88,7 @@
                         <configuration>
                             <groups>${groups}</groups>
                             <argLine>
-                                -Dspring.datasource.url=jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable
+                                -Dspring.datasource.url=jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable
                             </argLine>
                         </configuration>
                     </plugin>
@@ -97,7 +97,7 @@
         </profile>
         <!-- Integration tests matching group tags -->
         <profile>
-            <id>test-cloud</id>
+            <id>it-cloud</id>
             <build>
                 <plugins>
                     <plugin>
@@ -115,7 +115,7 @@
         </profile>
         <!-- Integration tests matching group tags -->
         <profile>
-            <id>test-dev</id>
+            <id>it-dev</id>
             <build>
                 <plugins>
                     <plugin>

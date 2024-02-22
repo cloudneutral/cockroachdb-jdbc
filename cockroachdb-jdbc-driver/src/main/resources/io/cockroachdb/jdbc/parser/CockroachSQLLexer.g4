@@ -2,7 +2,7 @@
     Simplified ANLTR4 grammar for CockroachDB DML statements for the
     purpose of batch array rewrites.
  */
-lexer grammar CockroachLexer;
+lexer grammar CockroachSQLLexer;
 
 options { caseInsensitive = true; }
 

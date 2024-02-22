@@ -10,8 +10,12 @@ import org.junit.jupiter.api.Tag;
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 import io.cockroachdb.jdbc.test.ThreadPool;
+import org.junit.jupiter.api.Tags;
 
-@Tag("anomaly-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("anomaly-test")
+})
 public abstract class AbstractAnomalyTest extends AbstractIntegrationTest {
     protected static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
 

@@ -6,12 +6,16 @@ import java.sql.Statement;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import io.cockroachdb.jdbc.rewrite.sfu.SelectForUpdateProcessor;
+import io.cockroachdb.jdbc.rewrite.SelectForUpdateProcessor;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class CockroachStatementTest {
     @Test
     public void givenExplicitTransaction_whenDetectingSFUStatement_expectTransactionScopedSFU() throws SQLException {

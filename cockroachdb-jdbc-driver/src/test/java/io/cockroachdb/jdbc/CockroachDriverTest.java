@@ -13,10 +13,14 @@ import java.util.Properties;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class CockroachDriverTest {
     @Test
     public void getConnection_Valid_IfProperDatabaseURL() throws SQLException {
@@ -31,7 +35,7 @@ public class CockroachDriverTest {
         DriverManager.registerDriver(new CockroachDriver());
 
         try (Connection connection = DriverManager.getConnection(
-                "jdbc:cockroachdb://0.0.0.0:26257/jdbc_test?sslmode=disable")) {
+                "jdbc:cockroachdb://0.0.0.0:26257/defaultdb?sslmode=disable")) {
             Assertions.assertFalse(connection.isClosed());
             Assertions.assertFalse(connection.isReadOnly());
         }
@@ -66,7 +70,7 @@ public class CockroachDriverTest {
         Assertions.assertTrue(CockroachDriver.isRegistered());
 
         DriverPropertyInfo[] arr = CockroachDriver.getRegisteredDriver().getPropertyInfo(
-                "jdbc:cockroachdb://0.0.0.0:26257/jdbc_test?sslmode=disable&retryTransientErrors=true",
+                "jdbc:cockroachdb://0.0.0.0:26257/defaultdb?sslmode=disable&retryTransientErrors=true",
                 new Properties());
 
         List<DriverPropertyInfo> psql = new ArrayList<>();

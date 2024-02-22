@@ -2,9 +2,13 @@ package io.cockroachdb.jdbc.util;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class AssertTest {
     @Test
     public void whenAssertingConditions_expectConditionsToHold() {

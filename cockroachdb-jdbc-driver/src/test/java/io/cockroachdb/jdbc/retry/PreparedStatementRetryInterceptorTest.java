@@ -6,12 +6,16 @@ import java.sql.SQLException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import io.cockroachdb.jdbc.ConnectionSettings;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class PreparedStatementRetryInterceptorTest {
     @Test
     public void whenProxyingPreparedStatementMethods_expectPassThroughToDelegate() throws SQLException {

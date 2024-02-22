@@ -5,9 +5,13 @@ import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class CalendarVersionTest {
     @Test
     public void whenParsingServerVersion_expectCalendarVersioning() {

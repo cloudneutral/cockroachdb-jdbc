@@ -7,11 +7,15 @@ import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
 import io.cockroachdb.jdbc.CockroachProperty;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class ExponentialBackoffRetryStrategyTest {
     @Test
     public void testPrintIntervals() {

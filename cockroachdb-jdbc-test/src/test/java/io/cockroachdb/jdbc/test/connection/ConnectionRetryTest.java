@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.test.retry;
+package io.cockroachdb.jdbc.test.connection;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -17,6 +17,7 @@ import io.cockroachdb.jdbc.test.rewrite.Product;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ansi.AnsiColor;
@@ -30,7 +31,9 @@ import io.cockroachdb.jdbc.test.PrettyText;
 import io.cockroachdb.jdbc.util.DurationFormat;
 
 @Order(1)
-@Tag("connection-retry-test")
+@Tags(value = {
+        @Tag("connection-retry-test")
+})
 @DatabaseFixture(beforeTestScript = "db/batch/product-ddl.sql")
 public class ConnectionRetryTest extends AbstractIntegrationTest {
     private final int NUM_PRODUCTS = 1_000;

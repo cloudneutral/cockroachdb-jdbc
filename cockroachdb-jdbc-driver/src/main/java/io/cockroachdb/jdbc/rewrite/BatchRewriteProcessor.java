@@ -1,14 +1,22 @@
 package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.rewrite.batch.InsertRewriteParseTreeListener;
-import io.cockroachdb.jdbc.rewrite.batch.UpdateRewriteParseTreeListener;
-import io.cockroachdb.jdbc.rewrite.batch.UpsertRewriteParseTreeListener;
+import io.cockroachdb.jdbc.parser.CockroachSQLLexer;
+import io.cockroachdb.jdbc.parser.CockroachSQLParser;
+import io.cockroachdb.jdbc.parser.FailFastErrorListener;
+import io.cockroachdb.jdbc.parser.FailFastErrorStrategy;
+import io.cockroachdb.jdbc.parser.SQLParseException;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.atn.PredictionMode;
 
-public abstract class CockroachParserFactory {
-    private CockroachParserFactory() {
+/**
+ * Factory class for Cockroach SQL batch DML statement rewrites.
+ *
+ * @author Kai Niemi
+ */
+public abstract class BatchRewriteProcessor {
+    private BatchRewriteProcessor() {
     }
 
     public static boolean isQualifiedInsertStatement(String query) {
@@ -24,14 +32,14 @@ public abstract class CockroachParserFactory {
     }
 
     public static boolean isQualifiedStatement(String query) {
-        // Check for any complex expressions / predicates and placeholders
+        // Pre-parse to look for complex expressions / predicates and placeholders
         try {
-            CockroachParser parser = createParser(query);
-            parser.addParseListener(new InsertRewriteParseTreeListener(sql -> {
+            CockroachSQLParser parser = createParser(query);
+            parser.addParseListener(new BatchInsertRewriteProcessor(sql -> {
             }));
-            parser.addParseListener(new UpsertRewriteParseTreeListener(sql -> {
+            parser.addParseListener(new BatchUpsertRewriteProcessor(sql -> {
             }));
-            parser.addParseListener(new UpdateRewriteParseTreeListener(sql -> {
+            parser.addParseListener(new BatchUpdateRewriteProcessor(sql -> {
             }));
             parser.root();
             return true;
@@ -43,8 +51,8 @@ public abstract class CockroachParserFactory {
     public static String rewriteInsertStatement(String query) {
         StringBuilder after = new StringBuilder();
 
-        CockroachParser parser = createParser(query);
-        parser.addParseListener(new InsertRewriteParseTreeListener(after::append));
+        CockroachSQLParser parser = createParser(query);
+        parser.addParseListener(new BatchInsertRewriteProcessor(after::append));
         parser.insertStatement();
 
         return after.toString();
@@ -53,8 +61,8 @@ public abstract class CockroachParserFactory {
     public static String rewriteUpsertStatement(String query) {
         StringBuilder after = new StringBuilder();
 
-        CockroachParser parser = createParser(query);
-        parser.addParseListener(new UpsertRewriteParseTreeListener(after::append));
+        CockroachSQLParser parser = createParser(query);
+        parser.addParseListener(new BatchUpsertRewriteProcessor(after::append));
         parser.upsertStatement();
 
         return after.toString();
@@ -63,24 +71,27 @@ public abstract class CockroachParserFactory {
     public static String rewriteUpdateStatement(String query) {
         StringBuilder after = new StringBuilder();
 
-        CockroachParser parser = createParser(query);
-        parser.addParseListener(new UpdateRewriteParseTreeListener(after::append));
+        CockroachSQLParser parser = createParser(query);
+        parser.addParseListener(new BatchUpdateRewriteProcessor(after::append));
         parser.updateStatement();
 
         return after.toString();
     }
 
-    private static CockroachParser createParser(String expression) {
+    private static CockroachSQLParser createParser(String expression) {
         final ANTLRErrorListener errorListener = new FailFastErrorListener();
 
-        CockroachLexer lexer = new CockroachLexer(CharStreams.fromString(expression));
+        CockroachSQLLexer lexer = new CockroachSQLLexer(CharStreams.fromString(expression));
         lexer.removeErrorListeners();
         lexer.addErrorListener(errorListener);
 
-        CockroachParser parser = new CockroachParser(new CommonTokenStream(lexer));
+        CockroachSQLParser parser = new CockroachSQLParser(new CommonTokenStream(lexer));
         parser.removeErrorListeners();
         parser.addErrorListener(errorListener);
         parser.setErrorHandler(new FailFastErrorStrategy());
+
+        // Grammar is simple enough with low ambiguity level
+        parser.getInterpreter().setPredictionMode(PredictionMode.SLL);
 
         return parser;
     }

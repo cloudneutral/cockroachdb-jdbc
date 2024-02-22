@@ -4,11 +4,15 @@ import java.sql.SQLException;
 import java.time.Duration;
 
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class LoggingRetryListenerTest {
     @Test
     public void whenCallingListener_expectLogMessages() {

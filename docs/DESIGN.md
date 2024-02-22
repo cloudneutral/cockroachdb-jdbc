@@ -76,7 +76,7 @@ To illustrate:
 
 ```java
 try (Connection connection 
-        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable") {
+        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable") {
   try (PreparedStatement ps = connection.prepareStatement("update table set x = ? where id = ?")) {
         ps.setObject(1, x);
         ps.setObject(2, y);
@@ -181,7 +181,7 @@ operations resulting in a serializable transaction ordering, allowing for both t
 
 ## Limitations of bulk operation rewrites
 
-The driver's SQL parser uses a limited [SQL grammar](../cockroachdb-jdbc-driver/src/main/resources/io/cockroachdb/jdbc/rewrite/CockroachParser.g4) 
+The driver's SQL parser uses a limited [SQL grammar](../cockroachdb-jdbc-driver/src/main/resources/io/cockroachdb/jdbc/rewrite/CockroachSQLParser.g4) 
 for rewrites, so there are some limitations on what type of CockroachDB DML statements (full [grammar](https://www.cockroachlabs.com/docs/stable/sql-grammar)) it supports.
 
 The basic SQL DML elements are supported including scalar expressions, logical and binary expressions, 
@@ -228,7 +228,7 @@ This diagram illustrates executing a single update with happy outcome, equivalen
 
 ```java
 try (Connection connection 
-        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable") {
+        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable") {
   try (PreparedStatement ps = connection.prepareStatement("update table set x = ? where id = ?")) {
         ps.setObject(1, x);
         ps.setObject(2, y);

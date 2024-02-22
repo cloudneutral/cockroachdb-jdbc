@@ -24,7 +24,7 @@ import io.cockroachdb.jdbc.CockroachProperty;
 public class DriverManagerTest {
     private static final Logger logger = LoggerFactory.getLogger(DriverManagerTest.class);
 
-    private final String url = "jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable";
+    private final String url = "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable";
 
     private final String user = "root";
 

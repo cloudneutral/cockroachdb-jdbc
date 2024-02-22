@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.rewrite;
+package io.cockroachdb.jdbc.parser;
 
 import org.antlr.v4.runtime.BaseErrorListener;
 import org.antlr.v4.runtime.RecognitionException;

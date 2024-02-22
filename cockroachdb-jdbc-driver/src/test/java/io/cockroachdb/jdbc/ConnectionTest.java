@@ -10,10 +10,14 @@ import java.util.Properties;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class ConnectionTest {
     @Test
     public void prepareStatement_ReturnResult_OnSimpleQuery() throws SQLException {
@@ -39,7 +43,7 @@ public class ConnectionTest {
         DriverManager.registerDriver(new CockroachDriver());
 
         try (Connection connection = DriverManager.getConnection(
-                "jdbc:cockroachdb://0.0.0.0:26257/jdbc_test?sslmode=disable")) {
+                "jdbc:cockroachdb://0.0.0.0:26257/defaultdb?sslmode=disable")) {
             Assertions.assertFalse(connection.isClosed());
             Assertions.assertFalse(connection.isReadOnly());
             try (PreparedStatement ps = connection.prepareStatement("select 1")) {

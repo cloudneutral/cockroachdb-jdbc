@@ -1,4 +1,4 @@
-package io.cockroachdb.jdbc.rewrite;
+package io.cockroachdb.jdbc.parser;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.slf4j.Logger;
@@ -12,7 +12,7 @@ import java.util.Deque;
  *
  * @author Kai Niemi
  */
-public abstract class AbstractCockroachParserListener extends CockroachParserBaseListener {
+public abstract class AbstractSQLParserListener extends CockroachSQLParserBaseListener {
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     private final Deque<Object> stack = new ArrayDeque<>();

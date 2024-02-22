@@ -245,7 +245,7 @@ public class CockroachDriverDemo {
         println(AnsiColor.BOLD_BRIGHT_WHITE, "Usage: java -jar cockroachdb-jdbc-demo.jar [options]");
         println(AnsiColor.BOLD_BRIGHT_WHITE, "Options include: (defaults in parenthesis)");
         println(AnsiColor.BRIGHT_CYAN,
-                "--url <url>               Connection URL (jdbc:cockroachdb://localhost:26257/jdbc_test)");
+                "--url <url>               Connection URL (jdbc:cockroachdb://localhost:26257/defaultdb)");
         println(AnsiColor.BRIGHT_CYAN, "--user <user>             Login user name (root)");
         println(AnsiColor.BRIGHT_CYAN, "--password <secret>       Login password (empty)");
         println(AnsiColor.BRIGHT_CYAN,
@@ -262,7 +262,7 @@ public class CockroachDriverDemo {
     }
 
     public static void main(String[] args) throws Exception {
-        String url = "jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable";
+        String url = "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable";
 
         String username = "root";
 

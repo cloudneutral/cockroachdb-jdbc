@@ -1,17 +1,20 @@
-package io.cockroachdb.jdbc.rewrite.batch;
+package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.rewrite.CockroachParserFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tag("unit-test")
-public class InsertRewriteParseTreeTest {
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
+public class BatchInsertRewriteProcessorTest {
     @Test
     public void whenInsertWithPlaceholderBinding_expectRewrite() {
         String before = "INSERT into product (id,inventory,price,name,sku) values (?,?,?,?,?)";
 
-        String after = CockroachParserFactory.rewriteInsertStatement(before);
+        String after = BatchRewriteProcessor.rewriteInsertStatement(before);
 
         String expected = "INSERT INTO product (id, inventory, price, name, sku) "
                 + "select "
@@ -28,7 +31,7 @@ public class InsertRewriteParseTreeTest {
     public void whenInsertWithPlaceholderAndAtomBinding_expectRewrite() {
         String before = "INSERT into product (id,inventory,price,name,sku) values (?,123,foo((500.50)),?,?)";
 
-        String after = CockroachParserFactory.rewriteInsertStatement(before);
+        String after = BatchRewriteProcessor.rewriteInsertStatement(before);
 
         String expected = "INSERT INTO product (id, inventory, price, name, sku) "
                 + "select "
@@ -45,7 +48,7 @@ public class InsertRewriteParseTreeTest {
     public void whenInsertWithPlaceholderBindingOnConflictDoNothing_expectRewrite() {
         String before = "INSERT into product (id,inventory,price,name,sku) values (?,?,?,?,?) on conflict (id) do nothing";
 
-        String after = CockroachParserFactory.rewriteInsertStatement(before);
+        String after = BatchRewriteProcessor.rewriteInsertStatement(before);
 
         String expected = "INSERT INTO product (id, inventory, price, name, sku) "
                 + "select "
@@ -63,7 +66,7 @@ public class InsertRewriteParseTreeTest {
     public void whenInsertWithPlaceholderBindingOnConflictOnConstraintDoNothing_expectRewrite() {
         String before = "INSERT into product (id,inventory,price,name,sku) values (?,?,?,?,?) on conflict on constraint x do nothing";
 
-        String after = CockroachParserFactory.rewriteInsertStatement(before);
+        String after = BatchRewriteProcessor.rewriteInsertStatement(before);
 
         String expected = "INSERT INTO product (id, inventory, price, name, sku) "
                 + "select "

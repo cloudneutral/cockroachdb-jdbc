@@ -1,5 +1,5 @@
 spring:
   datasource:
-    url: jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable
+    url: jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable
     username: root
     password:

@@ -1,8 +1,8 @@
-package io.cockroachdb.jdbc.rewrite.batch;
+package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.rewrite.AbstractCockroachParserListener;
-import io.cockroachdb.jdbc.rewrite.CockroachParser;
-import io.cockroachdb.jdbc.rewrite.SQLParseException;
+import io.cockroachdb.jdbc.parser.AbstractSQLParserListener;
+import io.cockroachdb.jdbc.parser.CockroachSQLParser;
+import io.cockroachdb.jdbc.parser.SQLParseException;
 import io.cockroachdb.jdbc.util.Pair;
 
 import java.util.ArrayList;
@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  *
  * @author Kai Niemi
  */
-public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListener {
+public class BatchUpdateRewriteProcessor extends AbstractSQLParserListener {
     private final List<Pair<String, String>> setClauseList = new ArrayList<>();
 
     private final Set<String> placeHolders = new TreeSet<>();
@@ -36,7 +36,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
 
     private String parameterPrefix = "p";
 
-    public UpdateRewriteParseTreeListener(Consumer<String> consumer) {
+    public BatchUpdateRewriteProcessor(Consumer<String> consumer) {
         this.consumer = consumer;
     }
 
@@ -57,7 +57,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitUpdateStatement(CockroachParser.UpdateStatementContext ctx) {
+    public void exitUpdateStatement(CockroachSQLParser.UpdateStatementContext ctx) {
         StringBuilder sb = new StringBuilder();
         sb.append("UPDATE ")
                 .append(tableName)
@@ -93,23 +93,23 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitTableName(CockroachParser.TableNameContext ctx) {
+    public void exitTableName(CockroachSQLParser.TableNameContext ctx) {
         this.tableName = ctx.getText();
     }
 
     @Override
-    public void exitSetClause(CockroachParser.SetClauseContext ctx) {
+    public void exitSetClause(CockroachSQLParser.SetClauseContext ctx) {
         String right = pop(String.class, ctx);
         setClauseList.add(Pair.of(ctx.identifier().getText(), right));
     }
 
     @Override
-    public void exitWhereClause(CockroachParser.WhereClauseContext ctx) {
+    public void exitWhereClause(CockroachSQLParser.WhereClauseContext ctx) {
         this.predicate = pop(String.class, ctx);
     }
 
     @Override
-    public void exitIsNullExpression(CockroachParser.IsNullExpressionContext ctx) {
+    public void exitIsNullExpression(CockroachSQLParser.IsNullExpressionContext ctx) {
         String prefix = pop(String.class, ctx);
 
         StringBuilder sb = new StringBuilder()
@@ -127,7 +127,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitLogicalExpression(CockroachParser.LogicalExpressionContext ctx) {
+    public void exitLogicalExpression(CockroachSQLParser.LogicalExpressionContext ctx) {
         String right = pop(String.class, ctx);
         String left = pop(String.class, ctx);
 
@@ -143,7 +143,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitComparisonExpression(CockroachParser.ComparisonExpressionContext ctx) {
+    public void exitComparisonExpression(CockroachSQLParser.ComparisonExpressionContext ctx) {
         String right = pop(String.class, ctx);
         String left = pop(String.class, ctx);
 
@@ -165,7 +165,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitMultiplyOrDivideExpression(CockroachParser.MultiplyOrDivideExpressionContext ctx) {
+    public void exitMultiplyOrDivideExpression(CockroachSQLParser.MultiplyOrDivideExpressionContext ctx) {
         String right = pop(String.class, ctx);
         String left = pop(String.class, ctx);
 
@@ -179,7 +179,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitPlusOrMinusExpression(CockroachParser.PlusOrMinusExpressionContext ctx) {
+    public void exitPlusOrMinusExpression(CockroachSQLParser.PlusOrMinusExpressionContext ctx) {
         String right = pop(String.class, ctx);
         String left = pop(String.class, ctx);
 
@@ -192,20 +192,20 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitLiteral(CockroachParser.LiteralContext ctx) {
+    public void exitLiteral(CockroachSQLParser.LiteralContext ctx) {
         push(ctx.getText(), ctx);
     }
 
     @Override
-    public void exitIdentifier(CockroachParser.IdentifierContext ctx) {
-        if (!(ctx.getParent() instanceof CockroachParser.FunctionNameContext)) {
+    public void exitIdentifier(CockroachSQLParser.IdentifierContext ctx) {
+        if (!(ctx.getParent() instanceof CockroachSQLParser.FunctionNameContext)) {
             String id = ctx.getText();
             push(tableName + "." + id, ctx);
         }
     }
 
     @Override
-    public void exitPlaceholder(CockroachParser.PlaceholderContext ctx) {
+    public void exitPlaceholder(CockroachSQLParser.PlaceholderContext ctx) {
         String id = ctx.getText();
         if (ctx.QUESTION() != null) {
             id = parameterPrefix + parameterIndex.incrementAndGet();
@@ -215,7 +215,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitFunctionCall(CockroachParser.FunctionCallContext ctx) {
+    public void exitFunctionCall(CockroachSQLParser.FunctionCallContext ctx) {
         String fnName = ctx.functionName().getText();
 
         List<String> args = new ArrayList<>();
@@ -243,7 +243,7 @@ public class UpdateRewriteParseTreeListener extends AbstractCockroachParserListe
     }
 
     @Override
-    public void exitNestedExpression(CockroachParser.NestedExpressionContext ctx) {
+    public void exitNestedExpression(CockroachSQLParser.NestedExpressionContext ctx) {
         String expr = pop(String.class, ctx);
         push("(" + expr + ")", ctx);
     }

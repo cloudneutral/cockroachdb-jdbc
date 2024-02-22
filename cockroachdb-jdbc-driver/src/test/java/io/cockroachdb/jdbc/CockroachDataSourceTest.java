@@ -11,10 +11,14 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class CockroachDataSourceTest {
     @Test
     public void whenDataSourceConnection_expectCorrectMapping() throws SQLException {
@@ -36,7 +40,7 @@ public class CockroachDataSourceTest {
 
         DataSource dataSource = CockroachDataSource
                 .builder()
-                .withUrl("jdbc:cockroachdb://1.1.1.1:26257/jdbc_test?sslmode=disable")
+                .withUrl("jdbc:cockroachdb://1.1.1.1:26257/defaultdb?sslmode=disable")
                 .withUsername("root")
                 .withPassword("root")
                 .withAutoCommit(true)
@@ -63,7 +67,7 @@ public class CockroachDataSourceTest {
     public void whenDataSourceConnectionWithBadURL_expectSQLException() throws SQLException {
         DataSource dataSource = CockroachDataSource
                 .builder()
-                .withUrl("jdbc:oracle://1.1.1.1:26257/jdbc_test")
+                .withUrl("jdbc:oracle://1.1.1.1:26257/defaultdb")
                 .withUsername("root")
                 .withPassword("root")
                 .withAutoCommit(true)

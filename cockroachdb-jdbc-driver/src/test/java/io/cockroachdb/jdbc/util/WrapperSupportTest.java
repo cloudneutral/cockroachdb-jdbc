@@ -4,9 +4,13 @@ import java.sql.SQLException;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
-@Tag("unit-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("unit-test")
+})
 public class WrapperSupportTest {
     interface Foo {
         void foo() throws SQLException;

@@ -120,7 +120,7 @@ Example of creating a JDBC connection and executing a simple `SELECT` query in a
 
 ```java
 try (Connection connection 
-        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable") {
+        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable") {
   try (Statement statement = connection.createStatement()) {
     try (ResultSet rs = statement.executeQuery("select version()")) {
       if (rs.next()) {
@@ -135,7 +135,7 @@ Example of executing a `SELECT` and an `UPDATE` in an explicit transaction with 
 
 ```java
 try (Connection connection
-             = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable")) {
+             = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable")) {
     connection.setAutoCommit(false);
 
     try (Statement statement = connection.createStatement()) {
@@ -165,7 +165,7 @@ Same as above where all qualified `SELECT`s are suffixed with `FOR UPDATE`:
 
 ```java
 try (Connection connection
-             = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable&implicitSelectForUpdate=true")) {
+             = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&implicitSelectForUpdate=true")) {
     connection.setAutoCommit(false);
     ...
     connection.commit();
@@ -396,7 +396,7 @@ dependency transitively.
 Class.forName(CockroachDriver.class.getName());
 
 try (Connection connection 
-        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable&implicitSelectForUpdate=true&retryTransientErrors=true") {
+        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&implicitSelectForUpdate=true&retryTransientErrors=true") {
   try (Statement statement = connection.createStatement()) {
     try (ResultSet rs = statement.executeQuery("select version()")) {
       if (rs.next()) {
@@ -415,7 +415,7 @@ Configure the datasource in `src/main/resources/application.yml`:
 spring:
   datasource:
     driver-class-name: io.cockroachdb.jdbc.CockroachDriver
-    url: "jdbc:cockroachdb://localhost:26257/jdbc_test?sslmode=disable&application_name=MyTestAppe&implicitSelectForUpdate=true&retryTransientErrors=true"
+    url: "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&application_name=MyTestAppe&implicitSelectForUpdate=true&retryTransientErrors=true"
     username: root
     password:
 ```
@@ -519,22 +519,23 @@ retry mechanism and other driver features.
 
 First start a [local](https://www.cockroachlabs.com/docs/stable/start-a-local-cluster.html) CockroachDB node or cluster.
 
-Create the database:
-
-```bash
-cockroach sql --insecure --host=localhost -e "CREATE database jdbc_test"
-```
-
 Then activate the anomaly integration test Maven profile:
 
 ```bash
 ./mvnw -P test-local -Dgroups=anomaly-test clean install
 ```
 
+Then activate all  integration tests Maven profile:
+
+```bash
+./mvnw -P test-local -Dgroups=all-test clean install
+```
+
 Available test groups include:
 
-- anomaly-test - Runs through a series of RW/WR/WW anomaly tests.
-- connection-retry-test - Runs a test with connection retries enabled.
+- all-test - Runs through all integration tests.
+- anomaly-test - Runs through a series of transaction anomaly tests.
+- connection-retry-test - Runs a test with connection retries enabled (requires operator to kill nodes/LB).
 - batch-insert-test - Batch inserts load test (using different batch sizes).
 - batch-update-test - Batch updates load test.
 - batch-rewrite-test - Batch DML rewrite test.

@@ -14,11 +14,15 @@ import io.cockroachdb.jdbc.util.ResourceSupplier;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Tags;
 import org.junit.jupiter.api.Test;
 
 import io.cockroachdb.jdbc.test.AbstractIntegrationTest;
 
-@Tag("anomaly-test")
+@Tags(value = {
+        @Tag("all-test"),
+        @Tag("anomaly-test")
+})
 public class SerializationConflictTest extends AbstractIntegrationTest {
     private ScheduledExecutorService executorService = Executors.newScheduledThreadPool(8);
 

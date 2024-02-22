@@ -17,7 +17,7 @@ import org.postgresql.util.PSQLState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.cockroachdb.jdbc.rewrite.sfu.SelectForUpdateProcessor;
+import io.cockroachdb.jdbc.rewrite.SelectForUpdateProcessor;
 import io.cockroachdb.jdbc.retry.ConnectionRetryInterceptor;
 import io.cockroachdb.jdbc.retry.MethodTraceLogger;
 import io.cockroachdb.jdbc.retry.RetryListener;

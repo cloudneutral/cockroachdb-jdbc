@@ -10,16 +10,8 @@
     </parent>
 
     <artifactId>cockroachdb-jdbc-driver</artifactId>
-
     <packaging>jar</packaging>
-
     <name>CockroachDB JDBC Driver</name>
-
-    <description>CockroachDB JDBC Driver that wraps pgJDBC</description>
-
-    <properties>
-        <antlr.version>4.13.1</antlr.version>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -33,7 +25,6 @@
         <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
-            <version>${antlr.version}</version>
         </dependency>
 
         <!-- Test -->
