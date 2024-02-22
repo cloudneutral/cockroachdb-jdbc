@@ -18,6 +18,15 @@ about its operation.
 
 See [MIT](LICENSE.txt) for terms and conditions. 
 
+## Supported Versions
+
+Verified dependency release versions:
+
+| Dependency  | Version(s)    | Link                                               |
+|-------------|---------------|----------------------------------------------------|
+| CockroachDB | v22.2 - v23.2 | https://www.cockroachlabs.com/docs/releases/release-support-policy#current-supported-releases |
+| pgJDBC      | 42.7.1        | https://jdbc.postgresql.org/              |
+
 ## Features
 
 This JDBC driver adds the following features on top of pgJDBC:
@@ -180,7 +189,7 @@ Add this dependency to your `pom.xml` file:
 <dependency>
     <groupId>io.cockroachdb.jdbc</groupId>
     <artifactId>cockroachdb-jdbc-driver</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
