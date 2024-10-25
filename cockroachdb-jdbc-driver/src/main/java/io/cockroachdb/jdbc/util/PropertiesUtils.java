@@ -1,6 +1,6 @@
 package io.cockroachdb.jdbc.util;
 
-import java.util.Properteis;
+import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
