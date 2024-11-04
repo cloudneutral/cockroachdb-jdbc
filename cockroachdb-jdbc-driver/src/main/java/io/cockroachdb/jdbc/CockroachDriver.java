@@ -1,5 +1,7 @@
 package io.cockroachdb.jdbc;
 
+import static io.cockroachdb.jdbc.util.PropertiesUtils.*;
+
 import java.lang.reflect.InvocationTargetException;
 import java.sql.Connection;
 import java.sql.Driver;
@@ -115,8 +117,8 @@ public class CockroachDriver implements Driver {
             return null;
         }
 
-        logger.info("Opening connection to \"{}\" using {} with properties {}",
-                url, CockroachDriverInfo.DRIVER_FULL_NAME, info);
+        logger.debug("Opening connection to \"{}\" using {} with properties {}",
+                     maskPassword(url), CockroachDriverInfo.DRIVER_FULL_NAME, maskPassword(info));
 
         final Properties defaults = new Properties();
         defaults.putAll(info);
