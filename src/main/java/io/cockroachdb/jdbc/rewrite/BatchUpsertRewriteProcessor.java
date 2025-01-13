@@ -1,13 +1,13 @@
 package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.parser.AbstractSQLParserListener;
-import io.cockroachdb.jdbc.parser.CockroachSQLParser;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+
+import io.cockroachdb.jdbc.parser.AbstractSQLParserListener;
+import io.cockroachdb.jdbc.parser.CockroachSQLParser;
 
 /**
  * Parse tree listener for rewriting UPSERT statements to use batch arrays.

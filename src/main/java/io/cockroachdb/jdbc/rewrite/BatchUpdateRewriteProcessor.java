@@ -1,10 +1,5 @@
 package io.cockroachdb.jdbc.rewrite;
 
-import io.cockroachdb.jdbc.parser.AbstractSQLParserListener;
-import io.cockroachdb.jdbc.parser.CockroachSQLParser;
-import io.cockroachdb.jdbc.parser.SQLParseException;
-import io.cockroachdb.jdbc.util.Pair;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -13,6 +8,11 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+
+import io.cockroachdb.jdbc.parser.AbstractSQLParserListener;
+import io.cockroachdb.jdbc.parser.CockroachSQLParser;
+import io.cockroachdb.jdbc.parser.SQLParseException;
+import io.cockroachdb.jdbc.util.Pair;
 
 /**
  * Parse tree listener for rewriting UPDATE statements to use batch arrays.

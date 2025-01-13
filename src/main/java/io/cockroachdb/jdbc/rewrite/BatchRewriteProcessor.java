@@ -1,14 +1,15 @@
 package io.cockroachdb.jdbc.rewrite;
 
+import org.antlr.v4.runtime.ANTLRErrorListener;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.atn.PredictionMode;
+
 import io.cockroachdb.jdbc.parser.CockroachSQLLexer;
 import io.cockroachdb.jdbc.parser.CockroachSQLParser;
 import io.cockroachdb.jdbc.parser.FailFastErrorListener;
 import io.cockroachdb.jdbc.parser.FailFastErrorStrategy;
 import io.cockroachdb.jdbc.parser.SQLParseException;
-import org.antlr.v4.runtime.ANTLRErrorListener;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.atn.PredictionMode;
 
 /**
  * Factory class for Cockroach SQL batch DML statement rewrites.

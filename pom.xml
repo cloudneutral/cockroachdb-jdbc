@@ -154,6 +154,25 @@
                     </configuration>
                 </plugin>
                 <plugin>
+                    <groupId>org.antlr</groupId>
+                    <artifactId>antlr4-maven-plugin</artifactId>
+                    <version>${antlr4.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>antlr4</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                    <configuration>
+                        <sourceDirectory>src/main/java</sourceDirectory>
+                        <includes>
+                            <include>**/CockroachSQLParser.g4</include>
+                            <include>**/CockroachSQLLexer.g4</include>
+                        </includes>
+                    </configuration>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-source-plugin</artifactId>
                     <version>3.3.1</version>
@@ -207,21 +226,6 @@
                         </filesets>
                     </configuration>
                 </plugin>
-                <plugin>
-                    <groupId>org.antlr</groupId>
-                    <artifactId>antlr4-maven-plugin</artifactId>
-                    <version>${antlr4.version}</version>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>antlr4</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                    <configuration>
-                        <sourceDirectory>src/main/resources</sourceDirectory>
-                    </configuration>
-                </plugin>
 
                 <!-- Release related plugins -->
                 <plugin>
@@ -263,11 +267,12 @@
                 <plugin>
                     <groupId>org.sonatype.central</groupId>
                     <artifactId>central-publishing-maven-plugin</artifactId>
-                    <version>0.6.0</version>
+                    <version>0.7.0</version>
                     <extensions>true</extensions>
                     <configuration>
                         <publishingServerId>central</publishingServerId>
                         <autoPublish>false</autoPublish>
+                        <skipPublishing>true</skipPublishing>
                     </configuration>
                 </plugin>
             </plugins>
@@ -277,6 +282,10 @@
             <plugin>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>com.amashchenko.maven.plugin</groupId>
+                <artifactId>gitflow-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
@@ -319,12 +328,8 @@
                 <skipTests>true</skipTests>
             </properties>
             <build>
+                <!-- Maven central related plugins -->
                 <plugins>
-                    <plugin>
-                        <groupId>com.amashchenko.maven.plugin</groupId>
-                        <artifactId>gitflow-maven-plugin</artifactId>
-                    </plugin>
-                    <!-- Maven central related plugins -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>
@@ -334,12 +339,12 @@
                         <artifactId>maven-javadoc-plugin</artifactId>
                     </plugin>
                     <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                    </plugin>
-                    <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
                     </plugin>
                 </plugins>
             </build>
