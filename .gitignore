@@ -8,4 +8,3 @@ target/
 Thumbs.db
 *.history
 *.lnk
-/cockroachdb-jdbc-demo/dependency-reduced-pom.xml

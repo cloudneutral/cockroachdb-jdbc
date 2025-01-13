@@ -24,7 +24,7 @@ jobs:
         cache: maven
     
     - name: Build with Maven
-      run: mvn -P test-coverage -B package --file pom.xml
+      run: mvn -P ci-test-coverage -B package --file pom.xml
    
     - name: JaCoCo Badge
       uses: cicirello/jacoco-badge-generator@v2.11.0
@@ -32,7 +32,7 @@ jobs:
         generate-branches-badge: true
         badges-directory: .github/badges
         generate-summary: true
-        jacoco-csv-file: cockroachdb-jdbc-driver/target/site/jacoco/jacoco.csv
+        jacoco-csv-file: target/site/jacoco/jacoco.csv
 
     - name: Log coverage percentages to workflow output
       run: |
@@ -43,7 +43,7 @@ jobs:
 #      uses: actions/upload-artifact@v2
 #      with:
 #        name: jacoco-report
-#        path: cockroachdb-jdbc-driver/target/site/jacoco/
+#        path: target/site/jacoco/
 
     - name: Commit and push the coverage badges and summary file
       if: ${{ github.event_name != 'pull_request' }}

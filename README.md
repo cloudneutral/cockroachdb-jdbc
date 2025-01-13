@@ -4,49 +4,92 @@
 [![coverage](.github/badges/jacoco.svg)](https://github.com/cloudneutral/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
 [![branches coverage](.github/badges/branches.svg)](https://github.com/cloudneutral/cockroachdb-jdbc/actions/workflows/maven-publish.yml)
 
+<!-- TOC -->
+* [CockroachDB JDBC Driver](#cockroachdb-jdbc-driver)
+  * [Supported Versions](#supported-versions)
+  * [Disclaimer](#disclaimer)
+  * [Terms of Use](#terms-of-use)
+  * [Features](#features)
+    * [Reducing Transaction Retries](#reducing-transaction-retries)
+    * [Speeding up Bulk Operations](#speeding-up-bulk-operations)
+      * [Examples](#examples)
+  * [Getting Help](#getting-help)
+    * [Reporting Issues](#reporting-issues)
+  * [Getting Started](#getting-started)
+    * [Maven configuration](#maven-configuration)
+    * [Plain Java Examples](#plain-java-examples)
+    * [Spring Boot Example](#spring-boot-example)
+  * [URL Properties](#url-properties)
+    * [retryTransientErrors](#retrytransienterrors)
+    * [retryConnectionErrors](#retryconnectionerrors)
+    * [retryListenerClassName](#retrylistenerclassname)
+    * [retryStrategyClassName](#retrystrategyclassname)
+    * [retryMaxAttempts](#retrymaxattempts)
+    * [retryMaxBackoffTime](#retrymaxbackofftime)
+    * [implicitSelectForUpdate](#implicitselectforupdate)
+    * [useCockroachMetadata](#usecockroachmetadata)
+    * [reWriteBatchedInserts](#rewritebatchedinserts)
+    * [reWriteBatchedUpserts](#rewritebatchedupserts)
+    * [reWriteBatchedUpdates](#rewritebatchedupdates)
+  * [Building](#building)
+    * [Versioning](#versioning)
+    * [Prerequisites](#prerequisites)
+    * [Clone the project](#clone-the-project)
+    * [Build the project](#build-the-project)
+<!-- TOC -->
+
 <img align="left" src="docs/logo.png" />
 
 An open-source JDBC Type-4 driver for [CockroachDB](https://www.cockroachlabs.com/) that wraps the PostgreSQL
-JDBC driver ([pgJDBC](https://jdbc.postgresql.org/)) and communicates in the PostgreSQL native network
+JDBC driver ([pgjdbc](https://jdbc.postgresql.org/)) that communicates in the PostgreSQL native network 
 wire (v3.0) protocol with CockroachDB.
-
-## Disclaimer 
-
-This project is not officially supported by Cockroach Labs. Use of this driver is 
-entirely at your own risk and Cockroach Labs makes no guarantees or warranties 
-about its operation. 
-
-See [MIT](LICENSE.txt) for terms and conditions. 
 
 ## Supported Versions
 
-Verified dependency release versions:
+Verified dependency release versions. Earlier and more recent versions 
+likely also works but are not verified.
 
-| Dependency  | Version(s)    | Link                                               |
-|-------------|---------------|----------------------------------------------------|
-| CockroachDB | v22.2 - v23.2 | https://www.cockroachlabs.com/docs/releases/release-support-policy#current-supported-releases |
-| pgJDBC      | 42.7.1        | https://jdbc.postgresql.org/              |
+| Dependency                                                  | Versions        | 
+|-------------------------------------------------------------|-----------------|
+| [CockroachDB](https://www.cockroachlabs.com/docs/releases/) | v22.2 - v24.3   | 
+| [pgjdbc](https://jdbc.postgresql.org/)                      | 42.7.3 - 42.7.4 | 
+| [JDK](https://openjdk.org/)                                 | 17 - 21 (LTS)   | 
+
+## Disclaimer
+
+This project is not officially supported by Cockroach Labs. Use of this driver is
+entirely at your own risk and Cockroach Labs makes no guarantees or warranties 
+about its operation.
+
+## Terms of Use
+
+See [MIT](LICENSE.txt) for terms and conditions.
 
 ## Features
 
-This JDBC driver adds the following features on top of pgJDBC:
+This JDBC driver adds the following features on top of pgjdbc:
 
-- Driver-level retries on [serialization conflicts](https://www.cockroachlabs.com/docs/v23.1/transaction-retry-error-reference)
-and [connection or ambiguous errors](https://www.cockroachlabs.com/docs/v23.1/common-errors#result-is-ambiguous)
+- Driver-level retries on [serialization conflicts](https://www.cockroachlabs.com/docs/v23.1/transaction-retry-error-reference) and [connection or ambiguous errors](https://www.cockroachlabs.com/docs/v23.1/common-errors#result-is-ambiguous)
 - Rewriting qualified SELECT queries to use [SELECT .. FOR UPDATE](https://www.cockroachlabs.com/docs/stable/select-for-update.html)  to [reduce serialization conflicts](https://www.cockroachlabs.com/docs/v23.1/performance-recipes#reduce-transaction-contention).
 - Rewriting batch INSERT, UPSERT and UPDATE statements to use array un-nesting to [speed up bulk operations](https://www.cockroachlabs.com/docs/v23.1/insert#bulk-inserts).
 - CockroachDB [database metadata](https://docs.oracle.com/en/java/javase/17/docs/api/java.sql/java/sql/DatabaseMetaData.html) (version information, etc).
 
 All the above are independent opt-in features disabled by default, except for database metadata. 
 The default operational mode is therefore proxy pass-through mode where all client JDBC API invocations
-are delegated to the pgJDBC driver.
+are delegated to the pgjdbc driver.
                    
 ### Reducing Transaction Retries
 
-CockroachDB is a distributed SQL database that runs in serializable (1SR) isolation mode. As such, it's more
-prone to transient errors under contention scenarios or due to the complexities of data distribution 
-in combination with strong transactional guarantees. Transient errors can be both reduced and retried 
-either at server side (which happens automatically), application client side or in this case driver side.
+> Since the introduction of this driver, read-committed isolation was added in 
+> CockroachDB v23.2 which reduces transient/retryable errors for contended workloads. 
+> Transient errors can still be raised for other reasons than transaction conflicts, 
+> so a retry strategy is still in order.
+
+CockroachDB is a distributed SQL database that runs in serializable (1SR) isolation mode by default. 
+As such, it's more prone to transient errors under contention scenarios or due to the complexities 
+of data distribution in combination with strong transactional guarantees. Transient errors can be 
+both reduced and retried either at server side (which happens automatically), application client 
+side or in this case driver side.
 
 Using `SELECT .. FOR UPDATE` to preemptively lock rows later to be updated in a transaction is one
 technique to [reduce retries](https://www.cockroachlabs.com/docs/v23.1/performance-recipes#reduce-transaction-contention)
@@ -56,49 +99,29 @@ rewrites along with the driver level retry logic (replaying transactions) may re
 conflicts from manifesting all the way to the application clients, at the expense of imposing locks 
 on every qualified `SELECT` operation.
 
-For further information, see the [design notes](docs/DESIGN.md) of how the driver-level retries works and 
-its limitations. 
+Application level retries is however always the preferred choice if you have that option. For further 
+information, see the [design notes](docs/DESIGN.md) of how the driver-level retries works and its 
+limitations.
 
 ### Speeding up Bulk Operations
 
-The driver can rewrite batch `UPDATE`, `INSERT` and `UPSERT` DML statements to use SQL array un-nesting. 
+The driver will rewrite batch `UPDATE`, `INSERT` and `UPSERT` DML statements to use SQL array un-nesting. 
 This will drastically improve performance for bulk operations that would otherwise pass single statements 
-over the wire. For INSERT statements, the pgJDBC also provides rewrites if the `reWriteBatchedInserts` 
-property is set to `true`. The limitation of the pgJDBC rewrite however, is that the batch size has a 
+over the wire. 
+
+For INSERT statements, the pgjdbc driver also provides rewrites if the `reWriteBatchedInserts` 
+property is set to `true`. The limitation of the pgjdbc rewrite however, is that the batch size has a 
 hard coded limit of 128 and it only applies to `INSERT` statements and `INSERT .. ON CONFLICT` _upserts_. 
 
 This driver removes these limitations by using a different technique that enables full batching-over-the-wire 
 for `INSERT`, `UPDATE` and `UPSERT` (akin to `INSERT .. on CONFLICT DO ..`) [statements](https://www.cockroachlabs.com/docs/v23.1/upsert).
 
 #### Examples
-               
-Assume there's two separate product UPDATE statements that are being batched. When using JDBC batch
-statements, these statements aren't actually batched over the wire but sent individually.
 
-```sql
-UPDATE product SET inventory=10, price=300.00, version=version+1, 
-               last_updated_at = with_min_timestamp(transaction_timestamp()) 
-               WHERE id='00000000-0000-0000-0000-000000000000'::uuid and version=0;
-UPDATE product SET inventory=15, price=600.00, version=version+1, 
-               last_updated_at = with_min_timestamp(transaction_timestamp()) 
-               WHERE id='00000000-0000-0000-0000-000000000001'::uuid and version=0;
-```
-
-When rewriting this, these two statements are collapsed to a single UPDATE using un-nested arrays:
-
-```sql
-update product set inventory=_dt.p1, price=_dt.p2, version=product.version + 1, 
-                   last_updated_at=with_min_timestamp(transaction_timestamp())
-from (select unnest(ARRAY[10,15]) as p1,
-             unnest(ARRAY[300.00,600.00]) as p2,
-             unnest(ARRAY['00000000-0000-0000-0000-000000000000'::uuid,
-                          '00000000-0000-0000-0000-000000000001'::uuid]) as p3) 
-         as _dt
-where product.id=_dt.p3 and product.version=0;
-```
-
-The driver can automatically rewrite these statements by intercepting `PreparedStatement`'s `addBatch` 
-and `executeBatch` methods. Similar to `FOR UPDATE` this would mean no existing codebase refactoring.
+Consider the example below using a standard JDBC batch construct for an `UPDATE`. While this works in pgjdbc
+there's no actual batching taking place. This driver will however automatically rewrite such statements 
+by intercepting `PreparedStatement`, `addBatch`and `executeBatch` methods without the need for any existing 
+codebase refactoring.
 
 ```java
 try (PreparedStatement ps = connection.prepareStatement(
@@ -119,11 +142,71 @@ try (PreparedStatement ps = connection.prepareStatement(
 } catch (SQLException ex) {
 }
 ```
+              
+When using pgjdbc batch statements, these statements aren't actually batched over the wire 
+but sent individually:
 
-For further information, see the [design notes](docs/DESIGN.md#limitations-of-bulk-operation-rewrites) 
-on bulk SQL statement rewrite limitations.
+```sql
+UPDATE product SET inventory=10, price=300.00, version=version+1, 
+               last_updated_at = with_min_timestamp(transaction_timestamp()) 
+               WHERE id='00000000-0000-0000-0000-000000000000'::uuid and version=0;
+UPDATE product SET inventory=15, price=600.00, version=version+1, 
+               last_updated_at = with_min_timestamp(transaction_timestamp()) 
+               WHERE id='00000000-0000-0000-0000-000000000001'::uuid and version=0;
+```
+
+After the driver rewrite, these two statements are collapsed to a single UPDATE with arrays:
+
+```sql
+update product set inventory=_dt.p1, price=_dt.p2, version=product.version + 1, 
+                   last_updated_at=with_min_timestamp(transaction_timestamp())
+from (select unnest(ARRAY[10,15]) as p1,
+             unnest(ARRAY[300.00,600.00]) as p2,
+             unnest(ARRAY['00000000-0000-0000-0000-000000000000'::uuid,
+                          '00000000-0000-0000-0000-000000000001'::uuid]) as p3) 
+         as _dt
+where product.id=_dt.p3 and product.version=0;
+```
+
+For further information, see the [design notes](docs/DESIGN.md#limitations-of-bulk-operation-rewrites) on bulk SQL statement rewrite limitations.
+
+## Getting Help
+
+### Reporting Issues
+
+This driver uses [GitHub](https://github.com/cloudneutral/cockroachdb-jdbc/issues) as issue tracking system to record bugs and feature requests.
+If you want to raise an issue, please follow the recommendations below:
+
+* Before you log a bug, please search the [issue tracker](https://github.com/cloudneutral/cockroachdb-jdbc/issues)
+  to see if someone has already reported the problem.
+* If the issue doesn't exist already, [create a new issue](https://github.com/cloudneutral/cockroachdb-jdbc/issues).
+* Please provide as much information as possible with the issue report, we like to know the version of Spring Data
+  that you are using and JVM version, complete stack traces and any relevant configuration information.
+* If you need to paste code, or include a stack trace format it as code using triple backtick.
 
 ## Getting Started
+
+### Maven configuration
+
+Add this dependency to your `pom.xml` file:
+
+```xml
+<dependency>
+    <groupId>io.github.kai-niemi.cockroachdb.jdbc</groupId>
+    <artifactId>cockroachdb-jdbc</artifactId>
+    <version>2.0.0</version>
+</dependency>
+```
+
+Now can now build your own project with the JDBC driver as a dependency 
+
+### Migration from 1.x
+
+As part of the driver now being published to Maven Central (since v2.x), the POM 
+coordinate `groupId` needed to changed from previous `io.cockroachdb.jdbc` 
+to `io.github.kai-niemi.cockroachdb.jdbc`. 
+
+### Plain Java Examples
 
 Example of creating a JDBC connection and executing a simple `SELECT` query in an implicit transaction:
 
@@ -148,7 +231,7 @@ try (Connection connection
     connection.setAutoCommit(false);
 
     try (Statement statement = connection.createStatement()) {
-        statement.execute("SET implicitSelectForUpdate = true");
+        statement.execute("SET implicitSelectForUpdate = true"); // alternative to URL parameter
     }
 
     // Will be rewritten by the driver to include suffix "FOR UPDATE"
@@ -170,100 +253,27 @@ try (Connection connection
 }
 ```
 
-Same as above where all qualified `SELECT`s are suffixed with `FOR UPDATE`:
+### Spring Boot Example
 
-```java
-try (Connection connection
-             = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&implicitSelectForUpdate=true")) {
-    connection.setAutoCommit(false);
-    ...
-    connection.commit();
-}
+Configure the datasource in `src/main/resources/application.yml`:
+
+```yml
+spring:
+  datasource:
+    driver-class-name: io.cockroachdb.jdbc.CockroachDriver
+    url: "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&implicitSelectForUpdate=true&retryTransientErrors=true"
+    username: root
+    password:
+    hikari:
+      maximum-pool-size: 32
+      data-source-properties:
+        retryTransientErrors: true
+        retryConnectionErrors: true
+        implicitSelectForUpdate: true
+        reWriteBatchedInserts: true
+        reWriteBatchedUpserts: true
+        reWriteBatchedUpdates: true
 ```
-
-## Maven configuration
-
-Add this dependency to your `pom.xml` file:
-
-```xml
-<dependency>
-    <groupId>io.cockroachdb.jdbc</groupId>
-    <artifactId>cockroachdb-jdbc-driver</artifactId>
-    <version>1.2.0</version>
-</dependency>
-```
-
-Then add the Maven repository to your `pom.xml` file (alternatively in Maven's [settings.xml](https://maven.apache.org/settings.html)):
-
-```xml
-<repository>
-    <id>github</id>
-    <name>GitHub CockroachDB Apache Maven Packages</name>
-    <url>https://maven.pkg.github.com/cloudneutral/cockroachdb-jdbc</url>
-    <snapshots>
-        <enabled>true</enabled>
-    </snapshots>
-</repository>
-```
-
-Finally, you need to authenticate to GitHub Packages by creating a personal access token (classic)
-that includes the `read:packages` scope. For more information, see [Authenticating to GitHub Packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry#authenticating-to-github-packages).
-
-Add your personal access token to the servers section in your [settings.xml](https://maven.apache.org/settings.html):
-
-```xml
-<server>
-    <id>github</id>
-    <username>your-github-name</username>
-    <password>your-access-token</password>
-</server>
-```
-Take note that the server and repository id's must match (it can be different than `github`).
-
-Now you should be able to build your own project with the JDBC driver as a dependency:
-
-```shell
-./mvnw clean install
-```
-
-Alternatively, you can just clone the repository and build it locally using `./mvnw install`. 
-See the building section at the end of this page.
-
-## Modules
-
-### cockroachdb-jdbc-driver
-
-The main library for the CockroachDB JDBC driver.
-
-### cockroachdb-jdbc-demo
-
-A standalone demo app to showcase the retry mechanism and other features.
-
-### cockroachdb-jdbc-test
-
-Integration tests and functional tests activated via Maven profiles. See build section 
-further down in this page.
-
-## Getting Help
-
-### Reporting Issues
-
-This driver uses [GitHub](https://github.com/cloudneutral/cockroachdb-jdbc/issues) as issue tracking system
-to record bugs and feature requests. If you want to raise an issue, please follow the recommendations below:
-
-* Before you log a bug, please search the [issue tracker](https://github.com/cloudneutral/cockroachdb-jdbc/issues)
-  to see if someone has already reported the problem.
-* If the issue doesn't exist already, [create a new issue](https://github.com/cloudneutral/cockroachdb-jdbc/issues).
-* Please provide as much information as possible with the issue report, we like to know the version of Spring Data
-  that you are using and JVM version, complete stack traces and any relevant configuration information.
-* If you need to paste code, or include a stack trace format it as code using triple backtick.
-
-### Supported CockroachDB and JDK Versions
-
-This driver is CockroachDB version agnostic and supports any version supported by the PostgreSQL
-JDBC driver v 42.6+ (pgwire protocol v3.0).
-
-It requires Java 17 (LTS) or later for building and at runtime. For more details, see the building section.
 
 ## URL Properties
 
@@ -274,11 +284,9 @@ and only change the URL prefix and the driver class name.
 The general format for a JDBC URL for connecting to a CockroachDB server:
 
     jdbc:cockroachdb:[//host[:port]/][database][?property1=value1[&property2=value2]...]
-
-See [pgjdbc](https://github.com/pgjdbc/pgjdbc) for all supported driver properties
-and the semantics.
-
-In addition, this driver has the following CockroachDB specific properties:
+ 
+See [CockroachProperty](src/main/java/io/cockroachdb/jdbc/CockroachProperty.java) for all CockroachDB JDBC driver specific properties (also listed below) and 
+[pgjdbc](https://github.com/pgjdbc/pgjdbc) for all supported driver properties and their semantics.
 
 ### retryTransientErrors
 
@@ -373,122 +381,33 @@ By default, the driver will use PostgreSQL JDBC driver metadata provided in `jav
 rather than CockroachDB specific metadata. While the latter is more correct, it causes incompatibilities
 with libraries that bind to PostgreSQL version details, such as Flyway and other tools.
 
-### reWriteBatchedInserts (since 1.1)
+### reWriteBatchedInserts
 
 (default: false)
 
 Enable optimization to rewrite batch `INSERT` statements to use arrays. 
 
-### reWriteBatchedUpserts (since 1.1)
+### reWriteBatchedUpserts
 
 (default: false)
 
 Enable optimization to rewrite batch `UPSERT` statements to use arrays.
 
-### reWriteBatchedUpdates (since 1.1)
+### reWriteBatchedUpdates
 
 (default: false)
 
 Enable optimization to rewrite batch `UPDATE` statements to use arrays.
 
-## Logging
+## Building
 
-This driver uses [SLF4J](https://www.slf4j.org/) for logging which means its agnostic to the logging
-framework used by the application. The JDBC driver module does not include any logging framework
-dependency transitively.
-
-## Additional Examples
-
-### Plain Java Example
-
-```java
-Class.forName(CockroachDriver.class.getName());
-
-try (Connection connection 
-        = DriverManager.getConnection("jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&implicitSelectForUpdate=true&retryTransientErrors=true") {
-  try (Statement statement = connection.createStatement()) {
-    try (ResultSet rs = statement.executeQuery("select version()")) {
-      if (rs.next()) {
-        System.out.println(rs.getString(1));
-      }
-    }
-  }
-}
-```
-
-### Spring Boot Example
-
-Configure the datasource in `src/main/resources/application.yml`:
-
-```yml
-spring:
-  datasource:
-    driver-class-name: io.cockroachdb.jdbc.CockroachDriver
-    url: "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable&application_name=MyTestAppe&implicitSelectForUpdate=true&retryTransientErrors=true"
-    username: root
-    password:
-```
-
-Optionally, configure the datasource programmatically and use the
-[TTDDYY](https://github.com/jdbc-observations/datasource-proxy) datasource logging proxy:
-
-```java
-@Bean
-@Primary
-public DataSource dataSource() {
-    return ProxyDataSourceBuilder
-            .create(hikariDataSource())
-            .traceMethods()
-            .logQueryBySlf4j(SLF4JLogLevel.DEBUG, "io.cockroachdb.jdbc")
-            .asJson()
-            .multiline()
-            .build();
-}
-
-@Bean
-@ConfigurationProperties("spring.datasource.hikari")
-public HikariDataSource hikariDataSource() {
-    HikariDataSource ds = dataSourceProperties()
-            .initializeDataSourceBuilder()
-            .type(HikariDataSource.class)
-            .build();
-    ds.setAutoCommit(false);
-    ds.addDataSourceProperty(PGProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
-    ds.addDataSourceProperty(CockroachProperty.IMPLICIT_SELECT_FOR_UPDATE.getName(), "true");
-    ds.addDataSourceProperty(CockroachProperty.RETRY_TRANSIENT_ERRORS.getName(), "true");
-    ds.addDataSourceProperty(CockroachProperty.RETRY_MAX_ATTEMPTS.getName(), "5");
-    ds.addDataSourceProperty(CockroachProperty.RETRY_MAX_BACKOFF_TIME.getName(), "10000");
-    return ds;
-}
-```
-
-To configure `src/main/resources/logback-spring.xml` to capture all SQL statements and JDBC API calls:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-    <include resource="org/springframework/boot/logging/logback/console-appender.xml" />
-
-    <logger name="org.springframework" level="INFO"/>
-
-    <logger name="io.cockroachdb.jdbc" level="DEBUG"/>
-
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-    </root>
-</configuration>
-```
-
-## Versioning
+### Versioning
 
 This library follows [Semantic Versioning](http://semver.org/).
 
-## Building
-
 ### Prerequisites
 
-- JDK17+ LTS (OpenJDK compatible)
+- JDK17+ (OpenJDK compatible)
 - Maven 3+ (optional, embedded wrapper available)
 
 If you want to build with the regular `mvn` command, you will need [Maven v3.x](https://maven.apache.org/run-maven/index.html) or above.
@@ -499,10 +418,18 @@ Install the JDK (Linux):
 sudo apt-get -qq install -y openjdk-17-jdk
 ```
 
-Install the JDK (macOS):
+Install the JDK (macOS using brew):
 
 ```bash
 brew install openjdk@17 
+```
+
+Install the JDK (macOS using sdkman):
+
+```bash
+curl -s "https://get.sdkman.io" | bash
+sdk list java
+sdk install java 17.0 (use TAB to pick edition)  
 ```
 
 ### Clone the project
@@ -519,38 +446,5 @@ chmod +x mvnw
 ./mvnw clean install
 ```
 
-The JDBC driver jar is now found in `cockroachdb-jdbc-driver/target`.
+The JDBC driver jar is now found in the `target` directory.
 
-### Run Integration Tests
-
-The integration tests will run through a series of contended workloads to exercise the
-retry mechanism and other driver features.
-
-First start a [local](https://www.cockroachlabs.com/docs/stable/start-a-local-cluster.html) CockroachDB node or cluster.
-
-Then activate the anomaly integration test Maven profile:
-
-```bash
-./mvnw -P test-local -Dgroups=anomaly-test clean install
-```
-
-Then activate all  integration tests Maven profile:
-
-```bash
-./mvnw -P test-local -Dgroups=all-test clean install
-```
-
-Available test groups include:
-
-- all-test - Runs through all integration tests.
-- anomaly-test - Runs through a series of transaction anomaly tests.
-- connection-retry-test - Runs a test with connection retries enabled (requires operator to kill nodes/LB).
-- batch-insert-test - Batch inserts load test (using different batch sizes).
-- batch-update-test - Batch updates load test.
-- batch-rewrite-test - Batch DML rewrite test.
-
-See the [pom.xml](pom.xml) file for changing the database URL and other settings (under `test` profile).
-
-## Terms of Use
-
-See [MIT](LICENSE.txt) for terms and conditions.
