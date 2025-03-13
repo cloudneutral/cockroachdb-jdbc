@@ -22,12 +22,12 @@
         <groups>unit-test</groups>
         <gpg.keyname>0x57278C48</gpg.keyname>
 
-        <postgresql.version>42.7.4</postgresql.version>
+        <postgresql.version>42.7.5</postgresql.version>
         <antlr4.version>4.13.2</antlr4.version>
-        <slf4j.version>2.0.16</slf4j.version>
-        <logback.version>1.5.16</logback.version>
-        <mockito.version>5.15.2</mockito.version>
-        <junit-jupiter.version>5.11.4</junit-jupiter.version>
+        <slf4j.version>2.0.17</slf4j.version>
+        <logback.version>1.5.17</logback.version>
+        <mockito.version>5.16.0</mockito.version>
+        <junit-jupiter.version>5.12.0</junit-jupiter.version>
     </properties>
 
     <inceptionYear>2023</inceptionYear>
@@ -45,6 +45,7 @@
             <organization>Cockroach Labs</organization>
             <organizationUrl>https://www.cockroachlabs.com/</organizationUrl>
             <timezone>UTC+1</timezone>
+            <email>admin@cloudneutral.se</email>
         </developer>
     </developers>
 

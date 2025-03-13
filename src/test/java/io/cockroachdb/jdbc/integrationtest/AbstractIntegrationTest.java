@@ -6,7 +6,6 @@ import java.io.IOException;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -42,10 +41,6 @@ public abstract class AbstractIntegrationTest {
 
     @BeforeAll
     public static void beforeAll() {
-        dataSource = primaryDataSource();
-    }
-
-    private static DataSource primaryDataSource() {
         HikariDataSource ds = hikariDataSource();
 
         DefaultQueryLogEntryCreator creator = new DefaultQueryLogEntryCreator();
@@ -56,7 +51,7 @@ public abstract class AbstractIntegrationTest {
         listener.setLogLevel(SLF4JLogLevel.TRACE);
         listener.setQueryLogEntryCreator(creator);
 
-        return sqlTraceLogger.isTraceEnabled()
+        AbstractIntegrationTest.dataSource = sqlTraceLogger.isTraceEnabled()
                 ? ProxyDataSourceBuilder
                 .create(ds)
                 .asJson()
@@ -67,17 +62,19 @@ public abstract class AbstractIntegrationTest {
 
     private static HikariDataSource hikariDataSource() {
         HikariDataSource ds = new HikariDataSource();
-        ds.setJdbcUrl(System.getProperty("datasource.url",
-                "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable"));
+        ds.setJdbcUrl(System.getProperty("datasource.url", "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable"));
+//        ds.setJdbcUrl(System.getProperty("datasource.url", "jdbc:postgresql://192.168.1.99:26257/defaultdb?sslmode=disable"));
         ds.setUsername(System.getProperty("datasource.user", "root"));
         ds.setPassword(System.getProperty("datasource.password", null));
-        ds.setAutoCommit(true);
+
+        ds.setMaximumPoolSize(64);
+        ds.setMinimumIdle(0);
         ds.setInitializationFailTimeout(-1);
         ds.setTransactionIsolation("TRANSACTION_SERIALIZABLE");
+        ds.setAutoCommit(true);
 
         ds.addDataSourceProperty(PGProperty.APPLICATION_NAME.getName(), "cockroachdb-jdbc");
         ds.addDataSourceProperty(PGProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
-
         ds.addDataSourceProperty(CockroachProperty.IMPLICIT_SELECT_FOR_UPDATE.getName(), "false");
         ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPSERTS.getName(), "true");
@@ -96,8 +93,6 @@ public abstract class AbstractIntegrationTest {
         ((Closeable) dataSource).close();
     }
 
-    /// //////////////////////////////////////////////////////////////////////
-
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
     private LoggingRetryListener loggingRetryListener;
@@ -111,9 +106,5 @@ public abstract class AbstractIntegrationTest {
         this.loggingRetryListener = new LoggingRetryListener();
         CockroachDriver.setRetryListenerSupplier(() -> loggingRetryListener);
         ScriptExecutor.executeBeforeScript(getClass(), dataSource);
-    }
-
-    @AfterEach
-    public void afterEachTest() {
     }
 }

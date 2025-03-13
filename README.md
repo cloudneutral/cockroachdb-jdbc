@@ -17,6 +17,7 @@
     * [Reporting Issues](#reporting-issues)
   * [Getting Started](#getting-started)
     * [Maven configuration](#maven-configuration)
+    * [Migration from 1.x](#migration-from-1x)
     * [Plain Java Examples](#plain-java-examples)
     * [Spring Boot Example](#spring-boot-example)
   * [URL Properties](#url-properties)
@@ -38,20 +39,18 @@
     * [Build the project](#build-the-project)
 <!-- TOC -->
 
-<img align="left" src="docs/logo.png" />
-
-An open-source JDBC Type-4 driver for [CockroachDB](https://www.cockroachlabs.com/) that wraps the PostgreSQL
+<img align="left" width="64" src="docs/logo.png" /> An open-source JDBC Type-4 driver 
+for [CockroachDB](https://www.cockroachlabs.com/) that wraps the PostgreSQL
 JDBC driver ([pgjdbc](https://jdbc.postgresql.org/)) that communicates in the PostgreSQL native network 
 wire (v3.0) protocol with CockroachDB.
 
 ## Supported Versions
 
-Verified dependency release versions. Earlier and more recent versions 
-likely also works but are not verified.
+Verified dependency release versions.
 
 | Dependency                                                  | Versions        | 
 |-------------------------------------------------------------|-----------------|
-| [CockroachDB](https://www.cockroachlabs.com/docs/releases/) | v22.2 - v24.3   | 
+| [CockroachDB](https://www.cockroachlabs.com/docs/releases/) | v22.2 - v25.1   | 
 | [pgjdbc](https://jdbc.postgresql.org/)                      | 42.7.3 - 42.7.4 | 
 | [JDK](https://openjdk.org/)                                 | 17 - 21 (LTS)   | 
 
@@ -194,7 +193,7 @@ Add this dependency to your `pom.xml` file:
 <dependency>
     <groupId>io.github.kai-niemi.cockroachdb.jdbc</groupId>
     <artifactId>cockroachdb-jdbc</artifactId>
-    <version>2.0.0</version>
+    <version>2.0.1</version>
 </dependency>
 ```
 
@@ -305,7 +304,7 @@ own application.
 
 ### retryConnectionErrors
 
-(default: false)
+(default: `false`)
 
 The CockroachDB JDBC driver will automatically retry transient connection errors with SQL state
 08001, 08003, 08004, 08006, 08007, 08S01 or 57P01 at read, write or commit time.
@@ -354,7 +353,7 @@ Applicable only when `retryTransientErrors` is true.
 
 ### implicitSelectForUpdate
 
-(default: false)
+(default: `false`)
 
 The driver will automatically append a `FOR UPDATE` clause to all qualified `SELECT` statements
 within connection scope. This parameter can also be set in an explicit transaction as a session
@@ -375,7 +374,7 @@ of the locked rows. It does not eliminate the chance of serialization conflicts 
 
 ### useCockroachMetadata
 
-(default: false)
+(default: `false`)
 
 By default, the driver will use PostgreSQL JDBC driver metadata provided in `java.sql.DatabaseMetaData`
 rather than CockroachDB specific metadata. While the latter is more correct, it causes incompatibilities
@@ -383,19 +382,19 @@ with libraries that bind to PostgreSQL version details, such as Flyway and other
 
 ### reWriteBatchedInserts
 
-(default: false)
+(default: `false`)
 
 Enable optimization to rewrite batch `INSERT` statements to use arrays. 
 
 ### reWriteBatchedUpserts
 
-(default: false)
+(default: `false`)
 
 Enable optimization to rewrite batch `UPSERT` statements to use arrays.
 
 ### reWriteBatchedUpdates
 
-(default: false)
+(default: `false`)
 
 Enable optimization to rewrite batch `UPDATE` statements to use arrays.
 

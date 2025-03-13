@@ -15,16 +15,16 @@ public class JdbcTemplate {
         return new JdbcTemplate(dataSource);
     }
 
-    private final DataSource dataSource;
-
-    public JdbcTemplate(DataSource dataSource) {
-        this.dataSource = dataSource;
-    }
-
     public static <T> Stream<List<T>> chunkedStream(Stream<T> stream, int chunkSize) {
         AtomicInteger idx = new AtomicInteger();
         return stream.collect(Collectors.groupingBy(x -> idx.getAndIncrement() / chunkSize))
                 .values().stream();
+    }
+
+    private final DataSource dataSource;
+
+    public JdbcTemplate(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
     public boolean execute(String sql, Object... params) throws RuntimeSQLException {
