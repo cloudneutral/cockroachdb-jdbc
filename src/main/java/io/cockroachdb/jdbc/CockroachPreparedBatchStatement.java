@@ -85,13 +85,18 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         record.sqlType = sqlType;
         record.value = value;
 
-        // Attempt qualification
-        if ("OTHER".equals(sqlType)) {
+        // Attempt type qualification / cast
+        if ("OTHER".equalsIgnoreCase(sqlType)) {
             try {
-                record.value = UUID.fromString(String.valueOf(value));
+                // OTHER usually denotes a UUID so try that first
+                record.value = UUID.fromString(Objects.toString(value));
                 record.sqlType = "UUID";
             } catch (IllegalArgumentException e) {
-                // something else
+                // Something else, possibly an enum which will likely fail later unless
+                // an implicit type cast exits (not supported in CockroachDB since 25.1).
+                // Ex: CREATE CAST (varchar AS order_status) WITH INOUT AS IMPLICIT;
+                record.value = Objects.toString(value);
+                record.sqlType = "VARCHAR";
             }
         }
 
@@ -112,10 +117,10 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
                         this.query, this.batchQuery);
             }
 
-            final PreparedStatement preparedStatement = connection.prepareStatement(this.batchQuery);
-
             int index = 1;
             int columnSize = 0;
+
+            final PreparedStatement preparedStatement = connection.prepareStatement(this.batchQuery);
 
             for (Pair<String, List<Object>> pair : columnValues) {
                 String type = pair.getFirst();
@@ -127,7 +132,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
                 }
                 columnSize = values.size();
 
-                Array array = preparedStatement.getConnection().createArrayOf(type, values.toArray());
+                Array array = connection.createArrayOf(type, values.toArray());
 
                 if (logger.isTraceEnabled()) {
                     logger.trace("Created array of type '{}' ({}) for column index {} with {} values",
