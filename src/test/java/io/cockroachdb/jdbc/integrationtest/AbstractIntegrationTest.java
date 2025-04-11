@@ -76,6 +76,7 @@ public abstract class AbstractIntegrationTest {
         ds.addDataSourceProperty(PGProperty.APPLICATION_NAME.getName(), "cockroachdb-jdbc");
         ds.addDataSourceProperty(PGProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.IMPLICIT_SELECT_FOR_UPDATE.getName(), "false");
+        ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCH_ARRAYS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_INSERTS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPSERTS.getName(), "true");
         ds.addDataSourceProperty(CockroachProperty.REWRITE_BATCHED_UPDATES.getName(), "true");

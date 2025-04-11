@@ -89,7 +89,7 @@ public class CockroachDriverTest {
             }
         });
 
-        Assertions.assertEquals(12, psql.size());
+        Assertions.assertEquals(13, psql.size());
         Assertions.assertEquals(81, crdb.size());
     }
 }

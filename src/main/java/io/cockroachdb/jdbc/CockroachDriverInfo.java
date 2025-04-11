@@ -13,7 +13,7 @@ public abstract class CockroachDriverInfo {
 
     public static final int MINOR_VERSION = 0;
 
-    public static final int MICRO_VERSION = 1;
+    public static final int MICRO_VERSION = 2;
 
     public static final String DRIVER_NAME = "CockroachDB JDBC Driver";
 
