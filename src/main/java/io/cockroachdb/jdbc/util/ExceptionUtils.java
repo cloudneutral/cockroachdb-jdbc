@@ -12,7 +12,7 @@ import org.postgresql.util.PSQLState;
  * @author Kai Niemi
  */
 public abstract class ExceptionUtils {
-    private static EnumSet<PSQLState> PSQL_STATES = EnumSet.allOf(PSQLState.class);
+    private static final EnumSet<PSQLState> PSQL_STATES = EnumSet.allOf(PSQLState.class);
 
     private ExceptionUtils() {
     }

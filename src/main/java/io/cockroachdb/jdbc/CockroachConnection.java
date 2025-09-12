@@ -1,13 +1,13 @@
 package io.cockroachdb.jdbc;
 
-import io.cockroachdb.jdbc.rewrite.BatchRewriteProcessor;
-import io.cockroachdb.jdbc.rewrite.QueryProcessor;
-import io.cockroachdb.jdbc.util.WrapperSupport;
-
 import java.sql.*;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
+
+import io.cockroachdb.jdbc.rewrite.BatchRewriteProcessor;
+import io.cockroachdb.jdbc.rewrite.QueryProcessor;
+import io.cockroachdb.jdbc.util.WrapperSupport;
 
 /**
  * A {@code java.sql.Connection} implementation for CockroachDB, wrapping an underlying {@code PGConnection}.
@@ -38,19 +38,19 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
         final String query = connectionSettings.getQueryProcessor().processQuery(this, sql);
 
         if (connectionSettings.isRewriteBatchInserts()
-                && BatchRewriteProcessor.isQualifiedInsertStatement(query)) {
+            && BatchRewriteProcessor.isQualifiedInsertStatement(query)) {
             String batchQuery = BatchRewriteProcessor.rewriteInsertStatement(query);
             return new CockroachPreparedBatchStatement(getDelegate(), query, batchQuery);
         }
 
         if (connectionSettings.isRewriteBatchUpserts()
-                && BatchRewriteProcessor.isQualifiedUpsertStatement(query)) {
+            && BatchRewriteProcessor.isQualifiedUpsertStatement(query)) {
             String batchQuery = BatchRewriteProcessor.rewriteUpsertStatement(query);
             return new CockroachPreparedBatchStatement(getDelegate(), query, batchQuery);
         }
 
         if (connectionSettings.isRewriteBatchUpdates()
-                && BatchRewriteProcessor.isQualifiedUpdateStatement(query)) {
+            && BatchRewriteProcessor.isQualifiedUpdateStatement(query)) {
             String batchQuery = BatchRewriteProcessor.rewriteUpdateStatement(query);
             return new CockroachPreparedBatchStatement(getDelegate(), query, batchQuery);
         }
@@ -60,7 +60,7 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
 
     @Override
     public CallableStatement prepareCall(String sql) throws SQLException {
-        throw new SQLFeatureNotSupportedException("CockroachDB does not support stored procedures");
+        return getDelegate().prepareCall(sql);
     }
 
     @Override
@@ -171,7 +171,7 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
 
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency) throws SQLException {
-        throw new SQLFeatureNotSupportedException("CockroachDB does not support stored procedures");
+        return getDelegate().prepareCall(sql, resultSetType, resultSetConcurrency);
     }
 
     @Override
@@ -233,7 +233,7 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
     @Override
     public CallableStatement prepareCall(String sql, int resultSetType, int resultSetConcurrency,
                                          int resultSetHoldability) throws SQLException {
-        throw new SQLFeatureNotSupportedException("CockroachDB does not support stored procedures");
+        return getDelegate().prepareCall(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
     }
 
     @Override
@@ -283,7 +283,7 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
     }
 
     @Override
-    public void setClientInfo(String name, String value) throws SQLClientInfoException {
+    public void setClientInfo(String name, String value) {
         try {
             getDelegate().setClientInfo(name, value);
         } catch (SQLException e) {
@@ -292,7 +292,7 @@ public class CockroachConnection extends WrapperSupport<Connection> implements C
     }
 
     @Override
-    public void setClientInfo(Properties properties) throws SQLClientInfoException {
+    public void setClientInfo(Properties properties) {
         try {
             getDelegate().setClientInfo(properties);
         } catch (SQLException e) {

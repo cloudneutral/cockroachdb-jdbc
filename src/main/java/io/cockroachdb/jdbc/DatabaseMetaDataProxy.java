@@ -34,9 +34,6 @@ public class DatabaseMetaDataProxy implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if ("supportsStoredProcedures".equals(method.getName())) {
-            return false;
-        }
         if ("getDatabaseProductName".equals(method.getName())) {
             return "CockroachDB";
         }
