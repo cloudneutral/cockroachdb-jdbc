@@ -64,7 +64,7 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
 
     @Order(2)
     @Test
-    public void whenExecutingTransactionPeriodically_thenObserveRetriesOnConnectionErrors() throws SQLException {
+    public void whenExecutingTransactionPeriodically_thenObserveRetriesOnConnectionErrors() {
         Duration runTimeDuration = DurationFormat.parseDuration(runTime);
         Duration delayPerUpdateDuration = DurationFormat.parseDuration(delayPerUpdate);
         Duration frequency = Duration.ofSeconds(30);
@@ -77,8 +77,8 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
 
         JdbcTemplate jdbcTemplate = JdbcTemplate.from(dataSource);
 
-        final Integer productCount = jdbcTemplate.queryForObject("select count(1) from product", Integer.class);
-        final Long originalSum = jdbcTemplate.queryForObject("select sum(inventory) from product", Long.class);
+        final Long productCount = jdbcTemplate.queryForObject("select count(1) from product", Long.class);
+        final Long originalSum = jdbcTemplate.queryForObject("select sum(inventory)::int from product", Long.class);
 
         Assertions.assertTrue(productCount > 0, "No products?");
 
@@ -89,16 +89,15 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
                 + "A successful outcome is zero rollbacks and correct inventory sum (unless the retry attempts get exhausted).");
         AsciiText.println(AnsiColor.GREEN, "\t%,d products", productCount);
         AsciiText.println(AnsiColor.GREEN, "\t%,d original inventory", originalSum);
-        AsciiText.println(AnsiColor.BRIGHT_YELLOW,
-                "The test starts in 10 sec and runs for total of %d seconds every %d second.",
+        AsciiText.println(AnsiColor.BRIGHT_YELLOW, "The test starts in 10 sec and runs for %d seconds every %d second.",
                 runTimeDuration.toSeconds(),
                 frequency.toSeconds());
 
-        final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(
-                Runtime.getRuntime().availableProcessors());
+        final ScheduledExecutorService executorService
+                = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
 
         executorService.scheduleAtFixedRate(() -> {
-            offset.set(offset.get() % productCount);
+            offset.set(offset.get() % productCount.intValue());
 
             try (Connection connection = dataSource.getConnection()) {
                 connection.setAutoCommit(false);
@@ -184,7 +183,7 @@ public class ConnectionRetryTest extends AbstractIntegrationTest {
                 AsciiText.rate("success", getLoggingRetryListener().getTotalSuccessfulRetries(),
                         "fail", getLoggingRetryListener().getTotalFailedRetries()));
 
-        long actualSum = jdbcTemplate.queryForObject("select sum(inventory) from product", Long.class);
+        long actualSum = jdbcTemplate.queryForObject("select sum(inventory)::int from product", Long.class);
         long expectedSum = originalSum - decrements.get();
 
         AsciiText.println(AnsiColor.BRIGHT_PURPLE, "%,d inventory original", originalSum);

@@ -46,7 +46,8 @@ public abstract class AsciiText {
     }
 
     public static void println(AnsiColor color, String pattern, Object... args) {
-        System.out.println(format(color, pattern, args));
+        String text = String.format(Locale.US, pattern, args);
+        System.out.printf("%s%s%s%n", color, text, AnsiColor.RESET);
     }
 
     public static String format(AnsiColor color, String pattern, Object... args) {

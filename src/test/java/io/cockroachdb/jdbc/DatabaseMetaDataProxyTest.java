@@ -17,11 +17,11 @@ import org.mockito.Mockito;
 })
 public class DatabaseMetaDataProxyTest {
     @Test
-    public void whenInspectingDatabaseMetadaata_expectCockroachDBMetadata() throws SQLException {
+    public void whenInspectingDatabaseMetaData_expectCockroachDBMetadata() throws SQLException {
         DatabaseMetaData databaseMetaDataMock = Mockito.mock(DatabaseMetaData.class);
 
         Mockito.when(databaseMetaDataMock.supportsStoredProcedures())
-                .thenReturn(false);
+                .thenReturn(true);
         Mockito.when(databaseMetaDataMock.getDatabaseProductName())
                 .thenReturn("CockroachDB");
 
@@ -38,7 +38,7 @@ public class DatabaseMetaDataProxyTest {
 
         DatabaseMetaData proxy = DatabaseMetaDataProxy.proxy(databaseMetaDataMock);
 
-        Assertions.assertFalse(proxy.supportsStoredProcedures());
+        Assertions.assertTrue(proxy.supportsStoredProcedures());
         Assertions.assertEquals("CockroachDB", proxy.getDatabaseProductName());
         Assertions.assertEquals("CockroachDB CCL v22.1.10 (x86_64-pc-linux-gnu, built 2022/10/27 19:46:05, go1.17.11)",
                 proxy.getDatabaseProductVersion());

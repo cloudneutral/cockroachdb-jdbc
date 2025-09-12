@@ -63,7 +63,7 @@ public abstract class AbstractIntegrationTest {
     private static HikariDataSource hikariDataSource() {
         HikariDataSource ds = new HikariDataSource();
         ds.setJdbcUrl(System.getProperty("datasource.url", "jdbc:cockroachdb://localhost:26257/defaultdb?sslmode=disable"));
-//        ds.setJdbcUrl(System.getProperty("datasource.url", "jdbc:postgresql://192.168.1.99:26257/defaultdb?sslmode=disable"));
+//        ds.setJdbcUrl(System.getProperty("datasource.url", "jdbc:cockroachdb://192.168.1.99:26257/defaultdb?sslmode=disable"));
         ds.setUsername(System.getProperty("datasource.user", "root"));
         ds.setPassword(System.getProperty("datasource.password", null));
 
