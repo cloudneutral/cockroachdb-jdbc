@@ -22,12 +22,12 @@
         <groups>unit-test</groups>
         <gpg.keyname>0x57278C48</gpg.keyname>
 
-        <postgresql.version>42.7.7</postgresql.version>
+        <postgresql.version>42.7.8</postgresql.version>
         <antlr4.version>4.13.2</antlr4.version>
         <slf4j.version>2.0.17</slf4j.version>
-        <logback.version>1.5.18</logback.version>
-        <mockito.version>5.19.0</mockito.version>
-        <junit-jupiter.version>5.13.4</junit-jupiter.version>
+        <logback.version>1.5.19</logback.version>
+        <mockito.version>5.20.0</mockito.version>
+        <junit-jupiter.version>5.14.0</junit-jupiter.version>
     </properties>
 
     <inceptionYear>2023</inceptionYear>
@@ -129,7 +129,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.14.0</version>
+                    <version>3.14.1</version>
                     <configuration>
                         <parameters>true</parameters>
                         <showDeprecation>false</showDeprecation>
@@ -166,7 +166,7 @@
                         </execution>
                     </executions>
                     <configuration>
-                        <sourceDirectory>src/main/java</sourceDirectory>
+                        <sourceDirectory>src/main/resources</sourceDirectory>
                         <includes>
                             <include>**/CockroachSQLParser.g4</include>
                             <include>**/CockroachSQLLexer.g4</include>
@@ -204,7 +204,7 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.5.3</version>
+                    <version>3.5.4</version>
                     <configuration>
                         <groups>${groups}</groups>
                     </configuration>
@@ -268,7 +268,7 @@
                 <plugin>
                     <groupId>org.sonatype.central</groupId>
                     <artifactId>central-publishing-maven-plugin</artifactId>
-                    <version>0.7.0</version>
+                    <version>0.9.0</version>
                     <extensions>true</extensions>
                     <configuration>
                         <publishingServerId>central</publishingServerId>
@@ -303,7 +303,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.8.13</version>
+                        <version>0.8.14</version>
                         <executions>
                             <execution>
                                 <goals>

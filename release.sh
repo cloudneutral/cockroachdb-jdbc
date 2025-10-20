@@ -61,6 +61,7 @@ then
   fn_print_info "Tree is clean"
 else
   fn_print_warn "Tree is dirty, please commit changes before running this script."
+  exit 1
 fi
 
 fn_print_info "Extracting pom.xml project version"

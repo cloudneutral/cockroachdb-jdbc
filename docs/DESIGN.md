@@ -185,8 +185,8 @@ operations resulting in a serializable transaction ordering, allowing for both t
 The driver's SQL parser uses a limited SQL grammar for rewrites, so there are some limitations on what 
 type of CockroachDB DML statements (full [grammar](https://www.cockroachlabs.com/docs/stable/sql-grammar)) it supports.
 
-- [Parser Grammar](../src/main/java/io/cockroachdb/jdbc/parser/CockroachSQLParser.g4)
-- [Parser Lexer](../src/main/java/io/cockroachdb/jdbc/parser/CockroachSQLLexer.g4)
+- [Parser Grammar](../src/main/resources/io/cockroachdb/jdbc/parser/CockroachSQLParser.g4)
+- [Parser Lexer](../src/main/resources/io/cockroachdb/jdbc/parser/CockroachSQLLexer.g4)
 
 The basic SQL DML elements are supported including scalar expressions, logical and binary expressions, 
 nested function calls, type casts and NULL expressions. That should cover most ORM generated DML statements 

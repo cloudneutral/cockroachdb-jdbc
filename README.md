@@ -51,7 +51,7 @@ Verified dependency release versions.
 | Dependency                                                  | Versions        | 
 |-------------------------------------------------------------|-----------------|
 | [CockroachDB](https://www.cockroachlabs.com/docs/releases/) | v22.2 - v25.3   | 
-| [pgjdbc](https://jdbc.postgresql.org/)                      | 42.7.3 - 42.7.7 | 
+| [pgjdbc](https://jdbc.postgresql.org/)                      | 42.7.3 - 42.7.8 | 
 | [JDK](https://openjdk.org/)                                 | 17 - 21 (LTS)   | 
 
 ## Disclaimer
