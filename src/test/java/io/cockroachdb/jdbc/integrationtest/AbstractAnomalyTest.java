@@ -9,15 +9,13 @@ import java.util.concurrent.TimeoutException;
 import io.cockroachdb.jdbc.integrationtest.support.ThreadPool;
 
 public abstract class AbstractAnomalyTest extends AbstractIntegrationTest {
-    protected static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
-
     protected static final int MAX_OFFSET_MILLIS = 500;
 
     protected static ThreadPool threadPool = ThreadPool.unboundedPool();
 
     public static void waitRandom() {
         try {
-            Thread.sleep(RANDOM.nextLong(50, 1000));
+            Thread.sleep(ThreadLocalRandom.current().nextLong(50, 1000));
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException(e);

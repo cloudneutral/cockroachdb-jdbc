@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
@@ -25,15 +26,15 @@ public class WriteWriteConflictTest extends AbstractAnomalyTest {
         List<Future<BigDecimal>> futures = new ArrayList<>();
 
         IntStream.rangeClosed(1, numThreads).forEach(value -> {
-            String who = "user-" + RANDOM.nextInt(1, 50);
+            String who = "user-" + ThreadLocalRandom.current().nextInt(1, 50);
 
             Future<BigDecimal> f = threadPool.submit(() -> {
                 try (Connection connection = dataSource.getConnection()) {
                     connection.setAutoCommit(false);
 
                     BigDecimal amount = new BigDecimal
-                            (RANDOM.nextDouble(1.00, 15.00)).setScale(2, RoundingMode.HALF_EVEN);
-                    amount = RANDOM.nextBoolean() ? amount.negate() : amount;
+                            (ThreadLocalRandom.current().nextDouble(1.00, 15.00)).setScale(2, RoundingMode.HALF_EVEN);
+                    amount = ThreadLocalRandom.current().nextBoolean() ? amount.negate() : amount;
                     BigDecimal result = debitAccount(connection, who, "asset", amount);
                     connection.commit();
                     return result;

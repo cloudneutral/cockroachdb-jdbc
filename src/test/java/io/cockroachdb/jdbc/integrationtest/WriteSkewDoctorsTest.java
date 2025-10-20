@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
@@ -82,7 +83,8 @@ public class WriteSkewDoctorsTest extends AbstractAnomalyTest {
                     }
 
                     connection.setAutoCommit(false);
-                    int result = updateOnCall(connection, RANDOM.nextBoolean() ? "alice" : "bob", 1234);
+                    int result = updateOnCall(connection,
+                            ThreadLocalRandom.current().nextBoolean() ? "alice" : "bob", 1234);
                     connection.commit();
                     return result;
                 }

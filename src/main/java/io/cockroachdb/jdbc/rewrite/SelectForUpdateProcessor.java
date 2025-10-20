@@ -23,6 +23,7 @@ public class SelectForUpdateProcessor implements QueryProcessor {
 
     private static final Set<String> AGGREGATE_FUNCTIONS = new HashSet<>(Arrays.asList(
             "array_agg",
+            "array_cat_agg",
             "avg",
             "bit_and",
             "bit_or",
@@ -37,6 +38,8 @@ public class SelectForUpdateProcessor implements QueryProcessor {
             "every",
             "json_agg",
             "json_object_agg",
+            "jsonb_agg",
+            "jsonb_object_agg",
             "max",
             "min",
             "percentile_cont",
@@ -72,8 +75,7 @@ public class SelectForUpdateProcessor implements QueryProcessor {
     ));
 
     // Simple matching for identifier and open parenthesis
-    private static final Pattern FUNCTION_PATTERN = Pattern.compile("(\\w+)\\(",
-            Pattern.CASE_INSENSITIVE);
+    private static final Pattern FUNCTION_PATTERN = Pattern.compile("(\\w+)\\(", Pattern.CASE_INSENSITIVE);
 
     @Override
     public String processQuery(Connection connection, String query)

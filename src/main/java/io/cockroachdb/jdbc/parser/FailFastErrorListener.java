@@ -14,7 +14,6 @@ public class FailFastErrorListener extends BaseErrorListener {
     public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line,
                             int charPositionInLine,
                             String msg, RecognitionException e) {
-        String errorMsg = String.format("line %s:%s at %s: %s", line, charPositionInLine, offendingSymbol, msg);
-        throw SQLParseException.from(errorMsg);
+        throw SQLParseException.from("line %s:%s at %s: %s".formatted(line, charPositionInLine, offendingSymbol, msg));
     }
 }

@@ -17,8 +17,6 @@ import io.cockroachdb.jdbc.util.DurationFormat;
  * @author Kai Niemi
  */
 public class ExponentialBackoffRetryStrategy implements RetryStrategy {
-    private static final ThreadLocalRandom RANDOM = ThreadLocalRandom.current();
-
     public static final Duration MAX_BACKOFF_TIME = Duration.ofSeconds(30);
 
     public static final int MAX_ATTEMPTS = 15;
@@ -112,7 +110,7 @@ public class ExponentialBackoffRetryStrategy implements RetryStrategy {
      */
     public Duration backoffInterval(int attempt) {
         double expBackoff = Math.pow(multiplier, attempt) + 100;
-        return Duration.ofMillis(Math.min((long) expBackoff + RANDOM.nextLong(1000),
+        return Duration.ofMillis(Math.min((long) expBackoff + ThreadLocalRandom.current().nextLong(1000),
                 maxBackoffTime.toMillis()));
     }
 

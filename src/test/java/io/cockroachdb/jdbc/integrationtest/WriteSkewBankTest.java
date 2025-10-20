@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Assertions;
@@ -102,7 +103,8 @@ public class WriteSkewBankTest extends AbstractAnomalyTest {
                     }
                     connection.setAutoCommit(false);
                     BigDecimal result = debitAccount(connection,
-                            RANDOM.nextBoolean() ? "alice" : "bob", RANDOM.nextBoolean() ? "asset" : "expense",
+                            ThreadLocalRandom.current().nextBoolean()
+                                    ? "alice" : "bob", ThreadLocalRandom.current().nextBoolean() ? "asset" : "expense",
                             new BigDecimal(700));
                     connection.commit();
                     return result;
