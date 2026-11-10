@@ -37,6 +37,16 @@ public abstract class AbstractRetryInterceptor<T> extends AbstractInterceptor<T>
         methodExecutions.clear();
     }
 
+    protected final List<MethodExecution> getMethodExecutions() {
+        return Collections.unmodifiableList(methodExecutions);
+    }
+
+    protected final void replaceMethodExecutions(List<MethodExecution> executions) {
+        List<MethodExecution> copy = new ArrayList<>(executions);
+        methodExecutions.clear();
+        methodExecutions.addAll(copy);
+    }
+
     protected MethodExecution proceedWrapExecution(Method method, Object[] args) {
         Assert.notNull(method, "method is null");
 

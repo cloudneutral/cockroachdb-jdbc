@@ -32,6 +32,29 @@ public class ConnectionSettings {
 
     private MethodTraceLogger methodTraceLogger;
 
+    private boolean transactionReadOnly;
+
+    private boolean sessionReadOnly;
+
+    /**
+     * @return true if the current transaction was declared read-only through SQL
+     * (like {@code SET TRANSACTION READ ONLY} or {@code AS OF SYSTEM TIME}), or the
+     * session default is read-only (like {@code SET default_transaction_read_only = on}).
+     */
+    public boolean isReadOnlyBySQL() {
+        return transactionReadOnly || sessionReadOnly;
+    }
+
+    public ConnectionSettings setTransactionReadOnly(boolean transactionReadOnly) {
+        this.transactionReadOnly = transactionReadOnly;
+        return this;
+    }
+
+    public ConnectionSettings setSessionReadOnly(boolean sessionReadOnly) {
+        this.sessionReadOnly = sessionReadOnly;
+        return this;
+    }
+
     public boolean isRewriteBatchUpdates() {
         return rewriteBatchUpdates;
     }

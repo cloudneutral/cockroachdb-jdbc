@@ -65,6 +65,39 @@ public class DatabaseMetaDataProxyTest {
                 .thenReturn(resultSetMock);
         Mockito.when(connectionMock.prepareStatement("select version()"))
                 .thenReturn(preparedStatementMock);
+        isolationMock(connectionMock, "serializable");
         return connectionMock;
+    }
+
+    private static void isolationMock(Connection connectionMock, String isolation) throws SQLException {
+        PreparedStatement preparedStatementMock = Mockito.mock(PreparedStatement.class);
+        ResultSet resultSetMock = Mockito.mock(ResultSet.class);
+        Mockito.when(resultSetMock.next()).thenReturn(true).thenReturn(false);
+        Mockito.when(resultSetMock.getString(1)).thenReturn(isolation);
+        Mockito.when(preparedStatementMock.executeQuery()).thenReturn(resultSetMock);
+        Mockito.when(connectionMock.prepareStatement("show default_transaction_isolation"))
+                .thenReturn(preparedStatementMock);
+    }
+
+    @Test
+    public void whenDefaultIsolationIsReadCommitted_expectReadCommitted() throws SQLException {
+        DatabaseMetaData databaseMetaDataMock = Mockito.mock(DatabaseMetaData.class);
+        Connection connectionMock = Mockito.mock(Connection.class);
+        isolationMock(connectionMock, "read committed");
+        Mockito.when(databaseMetaDataMock.getConnection()).thenReturn(connectionMock);
+
+        DatabaseMetaData proxy = DatabaseMetaDataProxy.proxy(databaseMetaDataMock);
+        Assertions.assertEquals(Connection.TRANSACTION_READ_COMMITTED, proxy.getDefaultTransactionIsolation());
+    }
+
+    @Test
+    public void whenMappingIsolationLevels_expectJdbcConstants() {
+        Assertions.assertEquals(Connection.TRANSACTION_SERIALIZABLE, DatabaseMetaDataProxy.toJdbcIsolation("serializable"));
+        Assertions.assertEquals(Connection.TRANSACTION_READ_COMMITTED, DatabaseMetaDataProxy.toJdbcIsolation("READ COMMITTED"));
+        Assertions.assertEquals(Connection.TRANSACTION_READ_COMMITTED, DatabaseMetaDataProxy.toJdbcIsolation("read_committed"));
+        Assertions.assertEquals(Connection.TRANSACTION_REPEATABLE_READ, DatabaseMetaDataProxy.toJdbcIsolation("repeatable read"));
+        Assertions.assertEquals(Connection.TRANSACTION_REPEATABLE_READ, DatabaseMetaDataProxy.toJdbcIsolation("snapshot"));
+        Assertions.assertEquals(Connection.TRANSACTION_READ_UNCOMMITTED, DatabaseMetaDataProxy.toJdbcIsolation("read uncommitted"));
+        Assertions.assertEquals(Connection.TRANSACTION_SERIALIZABLE, DatabaseMetaDataProxy.toJdbcIsolation(null));
     }
 }

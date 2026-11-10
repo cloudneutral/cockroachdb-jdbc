@@ -61,9 +61,23 @@ public class ResultSetRetryInterceptor extends AbstractRetryInterceptor<ResultSe
         if (context.hasThrowable()) {
             throw context.getTargetException();
         }
-        addMethodExecution(context);
         // We need to compute the checksum while the result is still valid
-        return updateChecksum(context.getResult(), firstChecksum);
+        Object rv = updateChecksum(context.getResult(), firstChecksum);
+        connectionRetryInterceptor.recordMethodExecution(this, slim(context));
+        return rv;
+    }
+
+    /**
+     * Only the method and arguments are needed to replay result set reads, since observed
+     * values are verified by checksum. Dropping the rest keeps the per-read footprint small
+     * for large result sets.
+     */
+    private static MethodExecution slim(MethodExecution context) {
+        context.setResult(null);
+        context.setTarget(null);
+        context.setConnectionInfo(null);
+        context.setExecutionTime(null);
+        return context;
     }
 
     @Override
@@ -78,8 +92,6 @@ public class ResultSetRetryInterceptor extends AbstractRetryInterceptor<ResultSe
             }
 
             Object lastResult = lastExecution.getResult();
-
-            methodExecution.setResult(lastResult);
 
             Object rv = updateChecksum(lastResult, lastChecksum);
             if (rv instanceof InputStream) {

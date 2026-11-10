@@ -30,4 +30,19 @@ public class ChecksumTest {
         Assertions.assertNotEquals(HexUtils.toHex(checksum1.toDigest()), HexUtils.toHex(digest));
         Assertions.assertNotEquals(HexUtils.toHex(checksum2.toDigest()), HexUtils.toHex(digest));
     }
+
+    @Test
+    public void whenComputingDigestRepeatedly_expectNoReset() {
+        Checksum checksum = Checksum.sha256();
+        checksum.update("first".getBytes(StandardCharsets.UTF_8));
+        byte[] digest1 = checksum.toDigest();
+        byte[] digest2 = checksum.toDigest();
+        Assertions.assertArrayEquals(digest1, digest2);
+
+        checksum.update("second".getBytes(StandardCharsets.UTF_8));
+
+        Checksum expected = Checksum.sha256();
+        expected.update("firstsecond".getBytes(StandardCharsets.UTF_8));
+        Assertions.assertArrayEquals(expected.toDigest(), checksum.toDigest());
+    }
 }

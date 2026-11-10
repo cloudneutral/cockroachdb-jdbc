@@ -132,6 +132,12 @@ public class BatchInsertRewriteProcessor extends AbstractSQLParserListener {
     }
 
     @Override
+    public void exitNotExpression(CockroachSQLParser.NotExpressionContext ctx) {
+        String expr = pop(String.class, ctx);
+        push("NOT " + expr, ctx);
+    }
+
+    @Override
     public void exitNestedExpression(CockroachSQLParser.NestedExpressionContext ctx) {
         String expr = pop(String.class, ctx);
         push("(" + expr + ")", ctx);

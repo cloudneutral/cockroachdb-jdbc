@@ -374,7 +374,7 @@ public class CockroachPreparedStatement extends WrapperSupport<PreparedStatement
     @Override
     public ResultSet getResultSet() throws SQLException {
         ResultSet resultSet = getDelegate().getResultSet();
-        return resultSet != null ? new CockroachResultSet(getDelegate().executeQuery()) : null;
+        return resultSet != null ? new CockroachResultSet(resultSet) : null;
     }
 
     @Override

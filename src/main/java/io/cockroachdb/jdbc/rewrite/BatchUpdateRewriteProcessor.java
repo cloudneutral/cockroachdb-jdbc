@@ -2,10 +2,10 @@ package io.cockroachdb.jdbc.rewrite;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -22,7 +22,8 @@ import io.cockroachdb.jdbc.util.Pair;
 public class BatchUpdateRewriteProcessor extends AbstractSQLParserListener {
     private final List<Pair<String, String>> setClauseList = new ArrayList<>();
 
-    private final Set<String> placeHolders = new TreeSet<>();
+    // Insertion order must match parameter binding order (p1, p2, .. p10, p11)
+    private final Set<String> placeHolders = new LinkedHashSet<>();
 
     private final AtomicInteger parameterIndex = new AtomicInteger();
 
@@ -240,6 +241,12 @@ public class BatchUpdateRewriteProcessor extends AbstractSQLParserListener {
         sb.append(")");
 
         push(sb.toString(), ctx);
+    }
+
+    @Override
+    public void exitNotExpression(CockroachSQLParser.NotExpressionContext ctx) {
+        String expr = pop(String.class, ctx);
+        push("NOT " + expr, ctx);
     }
 
     @Override

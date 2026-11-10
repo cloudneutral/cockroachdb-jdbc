@@ -39,7 +39,17 @@ public class Checksum {
         return this;
     }
 
+    /**
+     * Compute the digest of all input so far without resetting this checksum, so that
+     * it can be updated further and compared again (e.g. across multiple retry attempts).
+     *
+     * @return the digest bytes
+     */
     public byte[] toDigest() {
-        return messageDigest.digest();
+        try {
+            return ((MessageDigest) messageDigest.clone()).digest();
+        } catch (CloneNotSupportedException e) {
+            throw new IllegalStateException("Message digest not cloneable: " + messageDigest.getAlgorithm(), e);
+        }
     }
 }

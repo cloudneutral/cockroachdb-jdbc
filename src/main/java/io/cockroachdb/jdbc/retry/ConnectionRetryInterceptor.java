@@ -10,6 +10,10 @@ import java.sql.SQLWarning;
 import java.sql.Statement;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.postgresql.util.PSQLState;
 import org.slf4j.MDC;
@@ -47,6 +51,19 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
 
     private final ResourceSupplier<Connection> connectionSupplier;
 
+    /**
+     * Cached auto-commit mode of the current delegate, lazily resolved. Tracked locally
+     * since the delegate may be unusable (closed or broken) at the time a retry decision
+     * is made.
+     */
+    private Boolean autoCommit;
+
+    /**
+     * Open statements created by this connection, in creation order. Statements may span
+     * transactions and must be recreated on a new connection delegate when retrying.
+     */
+    private final Set<AbstractStatementRetryInterceptor<?>> openStatements = new LinkedHashSet<>();
+
     protected ConnectionRetryInterceptor(Connection connection,
                                          ConnectionSettings connectionSettings,
                                          ResourceSupplier<Connection> connectionSupplier) {
@@ -70,6 +87,90 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
         return connectionInfo(getDelegate());
     }
 
+    /**
+     * @return true if the connection is in auto-commit mode, in which case no method
+     * executions are recorded and no transient errors are retried. Each statement is then
+     * its own implicit transaction, and replaying previous (already committed) statements
+     * would produce duplicate side effects.
+     * @throws SQLException if the auto-commit mode cannot be resolved
+     */
+    protected boolean isAutoCommit() throws SQLException {
+        if (autoCommit == null) {
+            autoCommit = getDelegate().getAutoCommit();
+        }
+        return autoCommit;
+    }
+
+    /**
+     * Record a method execution only when in an explicit transaction (auto-commit disabled).
+     */
+    protected void recordMethodExecution(AbstractRetryInterceptor<?> interceptor, MethodExecution context)
+            throws SQLException {
+        if (!isAutoCommit()) {
+            interceptor.addMethodExecution(context);
+        }
+    }
+
+    int openStatementCount() {
+        return openStatements.size();
+    }
+
+    /**
+     * Callback from statement interceptors when closed. Closed statements are retained until
+     * the end of the current transaction since their executions may still need to be replayed.
+     */
+    void statementClosed(AbstractStatementRetryInterceptor<?> statementInterceptor) throws SQLException {
+        if (isAutoCommit()) {
+            openStatements.remove(statementInterceptor);
+        }
+    }
+
+    /**
+     * Clear the transaction history and compact the history of open statements to only
+     * include the state that carries over to the next transaction.
+     */
+    private void endTransaction() {
+        clearHistory();
+        Iterator<AbstractStatementRetryInterceptor<?>> it = openStatements.iterator();
+        while (it.hasNext()) {
+            AbstractStatementRetryInterceptor<?> statementInterceptor = it.next();
+            if (statementInterceptor.isClosed()) {
+                it.remove();
+            } else {
+                statementInterceptor.endTransaction();
+            }
+        }
+    }
+
+    private Object createStatementProxy(Method method, Object[] args) throws Throwable {
+        MethodExecution context = proceedWrapExecution(method, args);
+        if (context.hasThrowable()) {
+            throw context.getTargetException();
+        }
+
+        final boolean inTransaction = !isAutoCommit();
+        if (inTransaction) {
+            addMethodExecution(context);
+        }
+
+        final Object statementProxy;
+        if ("prepareStatement".equals(method.getName())) {
+            statementProxy = PreparedStatementRetryInterceptor.proxy(
+                    new CockroachPreparedStatement((PreparedStatement) context.getResult()), this);
+        } else {
+            statementProxy = StatementRetryInterceptor.proxy(
+                    new CockroachStatement((Statement) context.getResult(), connectionSettings), this);
+        }
+
+        AbstractStatementRetryInterceptor<?> statementInterceptor
+                = (AbstractStatementRetryInterceptor<?>) Proxy.getInvocationHandler(statementProxy);
+        statementInterceptor.setCreation(method, args, inTransaction);
+        openStatements.add(statementInterceptor);
+
+        context.setResult(statementProxy);
+        return statementProxy;
+    }
+
     protected String connectionInfo(Connection connection) {
         return "connection@" + Integer.toHexString(connection.hashCode());
     }
@@ -85,47 +186,27 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
                     if (context.hasThrowable()) {
                         throw context.getThrowable();
                     }
-                    clearHistory();
+                    endTransaction();
                     return null;
                 } catch (InvocationTargetException e) {
                     attempt = rollbackAndRetry(e.getTargetException(), method, attempt, startTime);
                 }
             }
         } else if ("setAutoCommit".equals(method.getName())) {
-            clearHistory();
-            return proceedExecution(method, args);
+            endTransaction();
+            Object rv = proceedExecution(method, args);
+            this.autoCommit = (Boolean) args[0];
+            return rv;
         } else if ("rollback".equals(method.getName())) {
-            clearHistory();
+            endTransaction();
             return proceedExecution(method, args);
         } else if ("close".equals(method.getName())) {
             clearHistory();
+            openStatements.clear();
             return proceedExecution(method, args);
-        } else if ("prepareStatement".equals(method.getName())) {
-            MethodExecution context = proceedWrapExecution(method, args);
-            if (context.hasThrowable()) {
-                throw context.getTargetException();
-            }
-            addMethodExecution(context);
-
-            CockroachPreparedStatement cockroachPreparedStatement
-                    = new CockroachPreparedStatement((PreparedStatement) context.getResult());
-            PreparedStatement preparedStatementRetryProxy
-                    = PreparedStatementRetryInterceptor.proxy(cockroachPreparedStatement, this);
-            context.setResult(preparedStatementRetryProxy);
-            return preparedStatementRetryProxy;
-        } else if ("createStatement".equals(method.getName())) {
-            MethodExecution context = proceedWrapExecution(method, args);
-            if (context.hasThrowable()) {
-                throw context.getTargetException();
-            }
-            addMethodExecution(context);
-
-            CockroachStatement cockroachStatement
-                    = new CockroachStatement((Statement) context.getResult(), connectionSettings);
-            Statement statementRetryProxy
-                    = StatementRetryInterceptor.proxy(cockroachStatement, this);
-            context.setResult(statementRetryProxy);
-            return statementRetryProxy;
+        } else if ("prepareStatement".equals(method.getName())
+                || "createStatement".equals(method.getName())) {
+            return createStatementProxy(method, args);
         } else if ("toString".equals(method.getName())
                 || "isWrapperFor".equals(method.getName())
                 || "unwrap".equals(method.getName())
@@ -137,7 +218,7 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
         if (context.hasThrowable()) {
             throw context.getTargetException();
         }
-        addMethodExecution(context);
+        recordMethodExecution(this, context);
         return context.getResult();
     }
 
@@ -152,6 +233,19 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
         final SQLException rootCauseException = (SQLException) targetException;
 
         if (!retryStrategy.isRetryableException(rootCauseException)) {
+            throw rootCauseException;
+        }
+
+        // Retries are only safe within explicit transactions. In auto-commit mode each statement
+        // is committed implicitly, so there is nothing to replay safely.
+        boolean autoCommitMode;
+        try {
+            autoCommitMode = isAutoCommit();
+        } catch (SQLException ex) {
+            rootCauseException.addSuppressed(ex);
+            throw rootCauseException;
+        }
+        if (autoCommitMode) {
             throw rootCauseException;
         }
 
@@ -203,9 +297,12 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
                 break;
             } catch (SQLException ex) {
                 retryException = ex;
-                // Unless it's a retryable error (which may include connection error) we can't continue
-                if (!retryStrategy.isConnectionError(ex)) {
-                    throw ex.initCause(rootCauseException);
+                // Unless it's a retryable error (serialization conflict during replay or connection
+                // error) we can't continue. A checksum failure means the application has already
+                // observed different results, so it's never retried.
+                if (ex instanceof ConcurrentUpdateException
+                        || !(retryStrategy.isConnectionError(ex) || retryStrategy.isRetryableException(ex))) {
+                    throw withCause(ex, rootCauseException);
                 }
                 logger.debug("SQL exception in attempt [{}]\n{}",
                         attempt, ExceptionUtils.toNestedString(ex));
@@ -218,6 +315,25 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
         }
 
         return attempt;
+    }
+
+    /**
+     * Attach the original exception as cause (or suppressed, if a cause is already set).
+     */
+    private static SQLException withCause(SQLException ex, SQLException rootCauseException) {
+        if (ex == rootCauseException) {
+            return ex;
+        }
+        if (ex.getCause() == null) {
+            try {
+                ex.initCause(rootCauseException);
+                return ex;
+            } catch (IllegalStateException e) {
+                // Cause explicitly initialized to null
+            }
+        }
+        ex.addSuppressed(rootCauseException);
+        return ex;
     }
 
     private void openDelegate(int attempt) throws SQLException {
@@ -261,6 +377,19 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
     @Override
     protected void doRetry(Iterable<MethodExecution> methodExecutions)
             throws Throwable {
+        // Recreate statements carried over from previous transactions or auto-commit mode
+        // (their creation is not part of the current transaction history)
+        for (AbstractStatementRetryInterceptor<?> statementInterceptor : new ArrayList<>(openStatements)) {
+            if (!statementInterceptor.isCreatedInTransaction()) {
+                MethodExecution context = proceedWrapExecution(statementInterceptor.getCreationMethod(),
+                        statementInterceptor.getCreationArgs());
+                if (context.hasThrowable()) {
+                    throw context.getTargetException();
+                }
+                statementInterceptor.retryWith(context.getResult());
+            }
+        }
+
         for (MethodExecution methodExecution : methodExecutions) {
             MethodExecution context = proceedWrapExecution(methodExecution.getMethod(),
                     methodExecution.getMethodArgs());
@@ -272,14 +401,9 @@ public class ConnectionRetryInterceptor extends AbstractRetryInterceptor<Connect
             Object lastResult = context.getResult();
 
             if (firstResult != null && Proxy.isProxyClass(firstResult.getClass())) {
-                if (Proxy.getInvocationHandler(firstResult) instanceof PreparedStatementRetryInterceptor) {
-                    PreparedStatementRetryInterceptor firstProxy =
-                            (PreparedStatementRetryInterceptor) Proxy.getInvocationHandler(firstResult);
-                    firstProxy.retry((PreparedStatement) lastResult);
-                } else if (Proxy.getInvocationHandler(firstResult) instanceof StatementRetryInterceptor) {
-                    StatementRetryInterceptor firstProxy =
-                            (StatementRetryInterceptor) Proxy.getInvocationHandler(firstResult);
-                    firstProxy.retry((Statement) lastResult);
+                if (Proxy.getInvocationHandler(firstResult) instanceof AbstractStatementRetryInterceptor<?>) {
+                    ((AbstractStatementRetryInterceptor<?>) Proxy.getInvocationHandler(firstResult))
+                            .retryWith(lastResult);
                 } else {
                     throw new UnsupportedOperationException("Unknown JDBC proxy: " + firstResult);
                 }

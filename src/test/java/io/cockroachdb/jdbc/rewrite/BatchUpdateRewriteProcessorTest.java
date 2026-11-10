@@ -178,4 +178,51 @@ public class BatchUpdateRewriteProcessorTest {
 
         Assertions.assertEquals(expected.toLowerCase(), after.toLowerCase());
     }
+
+    @Test
+    public void whenUpdateWithTenOrMorePlaceholders_expectUnnestInParameterOrder() {
+        String before = "UPDATE t SET c1 = ?, c2 = ?, c3 = ?, c4 = ?, c5 = ?, c6 = ?, " +
+                "c7 = ?, c8 = ?, c9 = ?, c10 = ?, c11 = ? WHERE id = ?";
+
+        String after = BatchRewriteProcessor.rewriteUpdateStatement(before);
+
+        StringBuilder expected = new StringBuilder("update t set ");
+        for (int i = 1; i <= 11; i++) {
+            expected.append(i > 1 ? ", " : "").append("c").append(i).append(" = _dt.p").append(i);
+        }
+        expected.append(" from (select ");
+        for (int i = 1; i <= 12; i++) {
+            expected.append(i > 1 ? ", " : "").append("unnest(?) as p").append(i);
+        }
+        expected.append(") as _dt where t.id = _dt.p12");
+
+        Assertions.assertEquals(expected.toString(), after.toLowerCase());
+    }
+
+    @Test
+    public void whenUpdateWithNotPredicate_expectNotPreserved() {
+        String before = "UPDATE account SET balance = ? WHERE id = ? AND NOT locked";
+
+        String after = BatchRewriteProcessor.rewriteUpdateStatement(before);
+
+        String expected = "update account set balance = _dt.p1 " +
+                "from (select unnest(?) as p1, unnest(?) as p2) as _dt " +
+                "where account.id = _dt.p2 and not account.locked";
+
+        Assertions.assertEquals(expected, after.toLowerCase());
+    }
+
+    @Test
+    public void whenUpdateWithNotNestedPredicate_expectNotPreserved() {
+        String before = "UPDATE account SET balance = ? WHERE id = ? AND NOT (closed = true OR balance < ?)";
+
+        String after = BatchRewriteProcessor.rewriteUpdateStatement(before);
+
+        String expected = "update account set balance = _dt.p1 " +
+                "from (select unnest(?) as p1, unnest(?) as p2, unnest(?) as p3) as _dt " +
+                "where account.id = _dt.p2 " +
+                "and not (account.closed = true or account.balance < _dt.p3)";
+
+        Assertions.assertEquals(expected, after.toLowerCase());
+    }
 }

@@ -24,7 +24,34 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
     private static final Pattern SET_IMPLICIT_SFU = Pattern.compile(
             "SET\\s+implicitSelectForUpdate\\s*=\\s*(true|false).*", Pattern.CASE_INSENSITIVE);
 
+    private static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.DOTALL;
+
+    private static final Pattern TRANSACTION_CHARACTERISTICS = Pattern.compile(
+            "^\\s*(set\\s+transaction|begin|start\\s+transaction)\\b(.*)$", FLAGS);
+
+    private static final Pattern SESSION_CHARACTERISTICS = Pattern.compile(
+            "^\\s*set\\s+session\\s+characteristics\\s+as\\s+transaction\\b(.*)$", FLAGS);
+
+    private static final Pattern SESSION_DEFAULT_READ_ONLY = Pattern.compile(
+            "^\\s*set\\s+(session\\s+)?default_transaction_read_only\\s*(=|to)\\s*'?(\\w+)'?.*$", FLAGS);
+
+    private static final Pattern SESSION_RESET = Pattern.compile(
+            "^\\s*reset\\s+(all|default_transaction_read_only)\\b.*$", FLAGS);
+
+    private static final Pattern READ_ONLY = Pattern.compile(
+            "\\bread\\s+only\\b|\\bas\\s+of\\s+system\\s+time\\b", FLAGS);
+
+    private static final Pattern READ_WRITE = Pattern.compile("\\bread\\s+write\\b", FLAGS);
+
+    private static final Pattern TRANSACTION_END = Pattern.compile(
+            "^\\s*(commit|end|abort|rollback(?!\\s+((work|transaction)\\s+)?to\\b))\\b.*$", FLAGS);
+
     private final ConnectionSettings connectionSettings;
+
+    /**
+     * True if the last execution was handled locally by the driver and produced no results.
+     */
+    private boolean noResults;
 
     public CockroachStatement(Statement delegate, ConnectionSettings connectionSettings) {
         super(delegate);
@@ -33,13 +60,56 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public ResultSet executeQuery(String sql) throws SQLException {
-        final String finalQuery = connectionSettings.getQueryProcessor().processQuery(getConnection(), sql);
+        noResults = false;
+        final String finalQuery = connectionSettings.isReadOnlyBySQL()
+                ? sql : connectionSettings.getQueryProcessor().processQuery(getConnection(), sql);
         return new CockroachResultSet(getDelegate().executeQuery(finalQuery));
+    }
+
+    /**
+     * Track transaction and session characteristics set through SQL, which affect
+     * the qualification of implicit select-for-update rewrites.
+     */
+    private void trackTransactionState(String sql) {
+        Matcher m = TRANSACTION_CHARACTERISTICS.matcher(sql);
+        if (m.matches()) {
+            if (READ_ONLY.matcher(m.group(2)).find()) {
+                connectionSettings.setTransactionReadOnly(true);
+            } else if (READ_WRITE.matcher(m.group(2)).find()) {
+                connectionSettings.setTransactionReadOnly(false);
+            }
+            return;
+        }
+        if (TRANSACTION_END.matcher(sql).matches()) {
+            connectionSettings.setTransactionReadOnly(false);
+            return;
+        }
+        m = SESSION_CHARACTERISTICS.matcher(sql);
+        if (m.matches()) {
+            if (READ_ONLY.matcher(m.group(1)).find()) {
+                connectionSettings.setSessionReadOnly(true);
+            } else if (READ_WRITE.matcher(m.group(1)).find()) {
+                connectionSettings.setSessionReadOnly(false);
+            }
+            return;
+        }
+        m = SESSION_DEFAULT_READ_ONLY.matcher(sql);
+        if (m.matches()) {
+            String value = m.group(3).toLowerCase();
+            connectionSettings.setSessionReadOnly("on".equals(value) || "true".equals(value));
+            return;
+        }
+        if (SESSION_RESET.matcher(sql).matches()) {
+            connectionSettings.setSessionReadOnly(false);
+        }
     }
 
     @Override
     public int executeUpdate(String sql) throws SQLException {
-        return getDelegate().executeUpdate(sql);
+        noResults = false;
+        int rv = getDelegate().executeUpdate(sql);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
@@ -104,6 +174,7 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public boolean execute(String sql) throws SQLException {
+        noResults = false;
         Matcher matcher = SET_IMPLICIT_SFU.matcher(sql);
         if (matcher.matches()) {
             if (getConnection().getAutoCommit()) {
@@ -135,26 +206,33 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
                 });
                 getLogger().debug("Disabling implicit select-for-update for connection delegate [{}]", getConnection());
             }
-            // Don't pass statement to DB since it's not recognized
-            return true;
+            // Don't pass statement to DB since it's not recognized. There's no result set
+            // nor update count.
+            noResults = true;
+            return false;
         }
-        return getDelegate().execute(sql);
+        boolean rv = getDelegate().execute(sql);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public ResultSet getResultSet() throws SQLException {
+        if (noResults) {
+            return null;
+        }
         ResultSet resultSet = getDelegate().getResultSet();
         return resultSet != null ? new CockroachResultSet(resultSet) : null;
     }
 
     @Override
     public int getUpdateCount() throws SQLException {
-        return getDelegate().getUpdateCount();
+        return noResults ? -1 : getDelegate().getUpdateCount();
     }
 
     @Override
     public boolean getMoreResults() throws SQLException {
-        return getDelegate().getMoreResults();
+        return !noResults && getDelegate().getMoreResults();
     }
 
     @Override
@@ -199,6 +277,7 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public int[] executeBatch() throws SQLException {
+        noResults = false;
         return getDelegate().executeBatch();
     }
 
@@ -209,7 +288,7 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public boolean getMoreResults(int current) throws SQLException {
-        return getDelegate().getMoreResults(current);
+        return !noResults && getDelegate().getMoreResults(current);
     }
 
     @Override
@@ -219,32 +298,50 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public int executeUpdate(String sql, int autoGeneratedKeys) throws SQLException {
-        return getDelegate().executeUpdate(sql, autoGeneratedKeys);
+        noResults = false;
+        int rv = getDelegate().executeUpdate(sql, autoGeneratedKeys);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public int executeUpdate(String sql, int[] columnIndexes) throws SQLException {
-        return getDelegate().executeUpdate(sql, columnIndexes);
+        noResults = false;
+        int rv = getDelegate().executeUpdate(sql, columnIndexes);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public int executeUpdate(String sql, String[] columnNames) throws SQLException {
-        return getDelegate().executeUpdate(sql, columnNames);
+        noResults = false;
+        int rv = getDelegate().executeUpdate(sql, columnNames);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public boolean execute(String sql, int autoGeneratedKeys) throws SQLException {
-        return getDelegate().execute(sql, autoGeneratedKeys);
+        noResults = false;
+        boolean rv = getDelegate().execute(sql, autoGeneratedKeys);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public boolean execute(String sql, int[] columnIndexes) throws SQLException {
-        return getDelegate().execute(sql, columnIndexes);
+        noResults = false;
+        boolean rv = getDelegate().execute(sql, columnIndexes);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public boolean execute(String sql, String[] columnNames) throws SQLException {
-        return getDelegate().execute(sql, columnNames);
+        noResults = false;
+        boolean rv = getDelegate().execute(sql, columnNames);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
@@ -279,7 +376,7 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public long getLargeUpdateCount() throws SQLException {
-        return getDelegate().getLargeUpdateCount();
+        return noResults ? -1 : getDelegate().getLargeUpdateCount();
     }
 
     @Override
@@ -294,26 +391,39 @@ public class CockroachStatement extends WrapperSupport<Statement> implements Sta
 
     @Override
     public long[] executeLargeBatch() throws SQLException {
+        noResults = false;
         return getDelegate().executeLargeBatch();
     }
 
     @Override
     public long executeLargeUpdate(String sql) throws SQLException {
-        return getDelegate().executeLargeUpdate(sql);
+        noResults = false;
+        long rv = getDelegate().executeLargeUpdate(sql);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public long executeLargeUpdate(String sql, int autoGeneratedKeys) throws SQLException {
-        return getDelegate().executeLargeUpdate(sql, autoGeneratedKeys);
+        noResults = false;
+        long rv = getDelegate().executeLargeUpdate(sql, autoGeneratedKeys);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public long executeLargeUpdate(String sql, int[] columnIndexes) throws SQLException {
-        return getDelegate().executeLargeUpdate(sql, columnIndexes);
+        noResults = false;
+        long rv = getDelegate().executeLargeUpdate(sql, columnIndexes);
+        trackTransactionState(sql);
+        return rv;
     }
 
     @Override
     public long executeLargeUpdate(String sql, String[] columnNames) throws SQLException {
-        return getDelegate().executeLargeUpdate(sql, columnNames);
+        noResults = false;
+        long rv = getDelegate().executeLargeUpdate(sql, columnNames);
+        trackTransactionState(sql);
+        return rv;
     }
 }

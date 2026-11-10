@@ -1,6 +1,5 @@
 package io.cockroachdb.jdbc;
 
-import io.cockroachdb.jdbc.util.Pair;
 import io.cockroachdb.jdbc.util.ResourceSupplier;
 import io.cockroachdb.jdbc.util.WrapperSupport;
 
@@ -12,6 +11,9 @@ import java.net.URL;
 import java.sql.Date;
 import java.sql.*;
 import java.util.*;
+
+import org.postgresql.util.PSQLException;
+import org.postgresql.util.PSQLState;
 
 /**
  * A {@code java.sql.PreparedStatement} implementation for CockroachDB, wrapping an underlying PgStatement
@@ -53,7 +55,22 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     private final List<ParameterRecord> parameterRecords = new ArrayList<>(64);
 
-    private final List<Pair<String, List<Object>>> columnValues = new ArrayList<>();
+    /**
+     * Deferred addBatch() rows (one entry per command in the batch), each holding the
+     * parameter records bound at the time. Kept as rows rather than columns so that the
+     * batch can be replayed onto the original statement if the rewrite is voided.
+     */
+    private final List<List<ParameterRecord>> pendingRows = new ArrayList<>();
+
+    private final boolean updateStatement;
+
+    /**
+     * The rewritten array statement, prepared on first batch execution and reused for subsequent
+     * batches. It never replaces the logical (original) statement delegate.
+     */
+    private PreparedStatement arrayStatement;
+
+    private boolean closed;
 
     private static class ParameterRecord {
         ResourceSupplier<?> operation;
@@ -67,6 +84,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         this.connection = connection;
         this.query = query;
         this.batchQuery = batchQuery;
+        this.updateStatement = query.trim().toLowerCase().startsWith("update");
     }
 
     private void addRowSetter(int parameterIndex, ResourceSupplier<?> operation, int sqlType, Object value)
@@ -79,6 +97,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         if (isBatchRewriteVoided()) {
             throw new IllegalStateException();
         }
+        checkNotClosed();
 
         ParameterRecord record = new ParameterRecord();
         record.operation = operation;
@@ -100,37 +119,48 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             }
         }
 
-        if (parameterRecords.size() < parameterIndex) {
-            parameterRecords.add(record);
-        } else {
-            parameterRecords.set(parameterIndex - 1, record);
+        if (parameterIndex < 1) {
+            throw new PSQLException("The parameter index is out of range: " + parameterIndex,
+                    PSQLState.INVALID_PARAMETER_VALUE);
         }
+
+        // Parameters may be set in any order, so address records by index and pad any gaps
+        while (parameterRecords.size() < parameterIndex) {
+            parameterRecords.add(null);
+        }
+        parameterRecords.set(parameterIndex - 1, record);
     }
 
-    private void createBatchArrayStatementDelegate() throws SQLException {
+    private PreparedStatement bindArrayStatement() throws SQLException {
         try {
-            if (logger.isDebugEnabled()) {
-                logger.debug("""
-                                Creating batch array delegate:
-                                Original query: {}
-                                   Array query: {}""",
-                        this.query, this.batchQuery);
+            if (arrayStatement == null) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("""
+                                    Creating batch array statement:
+                                    Original query: {}
+                                       Array query: {}""",
+                            this.query, this.batchQuery);
+                }
+                arrayStatement = connection.prepareStatement(this.batchQuery);
             }
 
-            int index = 1;
-            int columnSize = 0;
+            final PreparedStatement preparedStatement = arrayStatement;
+            final List<ParameterRecord> firstRow = pendingRows.get(0);
 
-            final PreparedStatement preparedStatement = connection.prepareStatement(this.batchQuery);
-
-            for (Pair<String, List<Object>> pair : columnValues) {
-                String type = pair.getFirst();
-                List<Object> values = pair.getSecond();
-
-                if (columnSize > 0 && columnSize != values.size()) {
-                    throw new IllegalStateException("Inconsistent column size for column index "
-                            + index + " (" + type + "). Expected " + columnSize + " but was " + values.size());
+            for (List<ParameterRecord> row : pendingRows) {
+                if (row.size() != firstRow.size()) {
+                    throw new PSQLException("Inconsistent number of parameters in batch. Expected "
+                            + firstRow.size() + " but was " + row.size(), PSQLState.INVALID_PARAMETER_VALUE);
                 }
-                columnSize = values.size();
+            }
+
+            for (int column = 0; column < firstRow.size(); column++) {
+                int index = column + 1;
+                String type = firstRow.get(column).sqlType;
+                List<Object> values = new ArrayList<>(pendingRows.size());
+                for (List<ParameterRecord> row : pendingRows) {
+                    values.add(row.get(column).value);
+                }
 
                 Array array = connection.createArrayOf(type, values.toArray());
 
@@ -142,12 +172,18 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
                             values.size());
                 }
 
-                preparedStatement.setArray(index++, array);
+                preparedStatement.setArray(index, array);
             }
 
-            setDelegate(preparedStatement);
+            return preparedStatement;
         } finally {
-            columnValues.clear();
+            pendingRows.clear();
+        }
+    }
+
+    private void checkNotClosed() throws SQLException {
+        if (closed) {
+            throw new PSQLException("This statement has been closed.", PSQLState.OBJECT_NOT_IN_STATE);
         }
     }
 
@@ -158,8 +194,8 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
     private PreparedStatement getDelegate(String source) throws SQLException {
         if (Proxy.isProxyClass(super.getDelegate().getClass())) {
             if (logger.isTraceEnabled()) {
-                logger.trace("Invalidating batch rewrite due to '{}' and replaying {} recorded ops",
-                        source, parameterRecords.size());
+                logger.trace("Invalidating batch rewrite due to '{}' and replaying {} batch rows and {} recorded ops",
+                        source, pendingRows.size(), parameterRecords.size());
             }
         }
         return getDelegate();
@@ -170,12 +206,22 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         if (Proxy.isProxyClass(super.getDelegate().getClass())) {
             setDelegate(connection.prepareStatement(this.query));
 
-            // Invoke all deferred setXX calls
             try {
+                // Replay deferred batch rows onto the original statement
+                for (List<ParameterRecord> row : pendingRows) {
+                    for (ParameterRecord record : row) {
+                        record.operation.get();
+                    }
+                    super.getDelegate().addBatch();
+                }
+                // Invoke all deferred setXX calls for the current (not yet batched) row
                 for (ParameterRecord record : parameterRecords) {
-                    record.operation.get();
+                    if (record != null) {
+                        record.operation.get();
+                    }
                 }
             } finally {
+                pendingRows.clear();
                 parameterRecords.clear();
             }
         }
@@ -468,18 +514,16 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
         if (isBatchRewriteVoided()) {
             getDelegate().addBatch();
         } else {
-            int index = 0;
-            try {
-                for (ParameterRecord record : parameterRecords) {
-                    if (columnValues.size() <= index) {
-                        List<Object> records = new ArrayList<>();
-                        records.add(record.value);
-                        columnValues.add(Pair.of(record.sqlType, records));
-                    } else {
-                        columnValues.get(index).getSecond().add(record.value);
-                    }
-                    index++;
+            checkNotClosed();
+            for (int i = 0; i < parameterRecords.size(); i++) {
+                if (parameterRecords.get(i) == null) {
+                    throw new PSQLException("No value specified for parameter " + (i + 1) + ".",
+                            PSQLState.INVALID_PARAMETER_VALUE);
                 }
+            }
+
+            try {
+                pendingRows.add(new ArrayList<>(parameterRecords));
             } finally {
                 parameterRecords.clear();
             }
@@ -688,7 +732,19 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void close() throws SQLException {
-        getDelegate("close()").close();
+        if (closed) {
+            return;
+        }
+        closed = true;
+        try {
+            if (arrayStatement != null) {
+                arrayStatement.close();
+            }
+        } finally {
+            if (isBatchRewriteVoided()) {
+                super.getDelegate().close();
+            }
+        }
     }
 
     @Override
@@ -733,12 +789,19 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public SQLWarning getWarnings() throws SQLException {
-        return getDelegate("getWarnings()").getWarnings();
+        if (isBatchRewriteVoided()) {
+            return getDelegate().getWarnings();
+        }
+        return arrayStatement != null ? arrayStatement.getWarnings() : null;
     }
 
     @Override
     public void clearWarnings() throws SQLException {
-        getDelegate("clearWarnings()").clearWarnings();
+        if (isBatchRewriteVoided()) {
+            getDelegate().clearWarnings();
+        } else if (arrayStatement != null) {
+            arrayStatement.clearWarnings();
+        }
     }
 
     @Override
@@ -754,7 +817,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
     @Override
     public ResultSet getResultSet() throws SQLException {
         ResultSet resultSet = getDelegate("getResultSet").getResultSet();
-        return resultSet != null ? new CockroachResultSet(getDelegate().executeQuery()) : null;
+        return resultSet != null ? new CockroachResultSet(resultSet) : null;
     }
 
     @Override
@@ -804,7 +867,11 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public void clearBatch() throws SQLException {
-        getDelegate("clearBatch()").clearBatch();
+        if (isBatchRewriteVoided()) {
+            getDelegate().clearBatch();
+        } else {
+            pendingRows.clear();
+        }
     }
 
     @Override
@@ -813,12 +880,62 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             return getDelegate().executeBatch();
         }
 
-        createBatchArrayStatementDelegate();
+        long[] counts = executeRewrittenBatch(false);
+        int[] rv = new int[counts.length];
+        for (int i = 0; i < counts.length; i++) {
+            rv[i] = (int) counts[i];
+        }
+        return rv;
+    }
 
-        int rowCount = getDelegate().executeUpdate();
+    /**
+     * Execute the deferred batch as a single array statement.
+     *
+     * @return update counts with one element per batched command, as mandated by JDBC
+     */
+    private long[] executeRewrittenBatch(boolean large) throws SQLException {
+        checkNotClosed();
+        final int commands = pendingRows.size();
 
-        int[] rv = new int[rowCount];
-        Arrays.fill(rv, SUCCESS_NO_INFO);
+        if (commands == 0) {
+            return new long[0];
+        }
+
+        if (pendingRows.get(0).isEmpty()) {
+            // No parameters to un-nest, so the rewritten statement cannot represent multiple
+            // commands. Fall back to a regular batch on the original statement (which
+            // replays the pending rows).
+            PreparedStatement delegate = getDelegate("executeBatch() without parameters");
+            return large ? delegate.executeLargeBatch()
+                    : Arrays.stream(delegate.executeBatch()).asLongStream().toArray();
+        }
+
+        // The statement remains in deferred (rewrite) mode afterwards, so it can be reused
+        // for subsequent batches with the same semantics.
+        PreparedStatement statement = bindArrayStatement();
+
+        long rowCount = large ? statement.executeLargeUpdate() : statement.executeUpdate();
+
+        return toUpdateCounts(rowCount, commands);
+    }
+
+    /**
+     * Derive per-command update counts from the total row count of the array statement.
+     * Exact counts are only reported when they can be deduced, otherwise
+     * {@link Statement#SUCCESS_NO_INFO} is used for every command.
+     */
+    private long[] toUpdateCounts(long rowCount, int commands) {
+        long[] rv = new long[commands];
+        if (rowCount == 0) {
+            // Nothing affected by any command
+            Arrays.fill(rv, 0);
+        } else if (!updateStatement && rowCount == commands) {
+            // Each INSERT/UPSERT command affects at most one row
+            Arrays.fill(rv, 1);
+        } else {
+            // An UPDATE command may affect any number of rows, so the distribution is unknown
+            Arrays.fill(rv, SUCCESS_NO_INFO);
+        }
         return rv;
     }
 
@@ -877,7 +994,10 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
 
     @Override
     public boolean isClosed() throws SQLException {
-        return getDelegate("isClosed()").isClosed();
+        if (isBatchRewriteVoided()) {
+            return super.getDelegate().isClosed();
+        }
+        return closed;
     }
 
     @Override
@@ -937,13 +1057,7 @@ public class CockroachPreparedBatchStatement extends WrapperSupport<PreparedStat
             return getDelegate().executeLargeBatch();
         }
 
-        createBatchArrayStatementDelegate();
-
-        long rowCount = getDelegate().executeLargeUpdate();
-
-        long[] rv = new long[(int) rowCount];
-        Arrays.fill(rv, SUCCESS_NO_INFO);
-        return rv;
+        return executeRewrittenBatch(true);
     }
 
     @Override

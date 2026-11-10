@@ -65,10 +65,37 @@ public class DatabaseMetaDataProxy implements InvocationHandler {
             return CockroachDriverInfo.JDBC_MINOR_VERSION;
         }
         if ("getDefaultTransactionIsolation".equals(method.getName())) {
-            return Connection.TRANSACTION_SERIALIZABLE;
+            return retrieveDefaultIsolation();
         }
 
         return method.invoke(delegate, args);
+    }
+
+    /**
+     * Resolve the session default isolation level, which may be other than SERIALIZABLE
+     * (like READ COMMITTED) depending on cluster and session settings.
+     */
+    private int retrieveDefaultIsolation() throws SQLException {
+        try (PreparedStatement ps = delegate.getConnection().prepareStatement("show default_transaction_isolation")) {
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return toJdbcIsolation(rs.getString(1));
+                }
+            }
+        }
+        return Connection.TRANSACTION_SERIALIZABLE;
+    }
+
+    static int toJdbcIsolation(String level) {
+        if (level == null) {
+            return Connection.TRANSACTION_SERIALIZABLE;
+        }
+        return switch (level.trim().toLowerCase().replace('_', ' ')) {
+            case "read uncommitted" -> Connection.TRANSACTION_READ_UNCOMMITTED;
+            case "read committed" -> Connection.TRANSACTION_READ_COMMITTED;
+            case "repeatable read", "snapshot" -> Connection.TRANSACTION_REPEATABLE_READ;
+            default -> Connection.TRANSACTION_SERIALIZABLE;
+        };
     }
 
     private Optional<String> retrieveServerVersion() throws SQLException {
