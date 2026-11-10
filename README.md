@@ -6,43 +6,49 @@
 
 <!-- TOC -->
 * [CockroachDB JDBC Driver](#cockroachdb-jdbc-driver)
-  * [Supported Versions](#supported-versions)
-  * [Disclaimer](#disclaimer)
-  * [Terms of Use](#terms-of-use)
-  * [Features](#features)
-    * [Reducing Transaction Retries](#reducing-transaction-retries)
-    * [Speeding up Bulk Operations](#speeding-up-bulk-operations)
-      * [Examples](#examples)
-  * [Getting Help](#getting-help)
-    * [Reporting Issues](#reporting-issues)
-  * [Getting Started](#getting-started)
-    * [Maven configuration](#maven-configuration)
-    * [Migration from 1.x](#migration-from-1x)
-    * [Plain Java Examples](#plain-java-examples)
-    * [Spring Boot Example](#spring-boot-example)
-  * [URL Properties](#url-properties)
-    * [retryTransientErrors](#retrytransienterrors)
-    * [retryConnectionErrors](#retryconnectionerrors)
-    * [retryListenerClassName](#retrylistenerclassname)
-    * [retryStrategyClassName](#retrystrategyclassname)
-    * [retryMaxAttempts](#retrymaxattempts)
-    * [retryMaxBackoffTime](#retrymaxbackofftime)
-    * [implicitSelectForUpdate](#implicitselectforupdate)
-    * [useCockroachMetadata](#usecockroachmetadata)
-    * [reWriteBatchedInserts](#rewritebatchedinserts)
-    * [reWriteBatchedUpserts](#rewritebatchedupserts)
-    * [reWriteBatchedUpdates](#rewritebatchedupdates)
-  * [Building](#building)
-    * [Versioning](#versioning)
-    * [Prerequisites](#prerequisites)
-    * [Clone the project](#clone-the-project)
-    * [Build the project](#build-the-project)
+    * [Maintenance Status](#maintenance-status)
+    * [Supported Versions](#supported-versions)
+    * [Disclaimer](#disclaimer)
+    * [Terms of Use](#terms-of-use)
+    * [Features](#features)
+        * [Reducing Transaction Retries](#reducing-transaction-retries)
+        * [Speeding up Bulk Operations](#speeding-up-bulk-operations)
+            * [Examples](#examples)
+    * [Getting Help](#getting-help)
+        * [Reporting Issues](#reporting-issues)
+    * [Getting Started](#getting-started)
+        * [Maven configuration](#maven-configuration)
+        * [Migration from 1.x](#migration-from-1x)
+        * [Plain Java Examples](#plain-java-examples)
+        * [Spring Boot Example](#spring-boot-example)
+    * [URL Properties](#url-properties)
+        * [retryTransientErrors](#retrytransienterrors)
+        * [retryConnectionErrors](#retryconnectionerrors)
+        * [retryListenerClassName](#retrylistenerclassname)
+        * [retryStrategyClassName](#retrystrategyclassname)
+        * [retryMaxAttempts](#retrymaxattempts)
+        * [retryMaxBackoffTime](#retrymaxbackofftime)
+        * [implicitSelectForUpdate](#implicitselectforupdate)
+        * [useCockroachMetadata](#usecockroachmetadata)
+        * [reWriteBatchedInserts](#rewritebatchedinserts)
+        * [reWriteBatchedUpserts](#rewritebatchedupserts)
+        * [reWriteBatchedUpdates](#rewritebatchedupdates)
+    * [Building](#building)
+        * [Versioning](#versioning)
+        * [Prerequisites](#prerequisites)
+        * [Clone the project](#clone-the-project)
+        * [Build the project](#build-the-project)
 <!-- TOC -->
 
 <img align="left" width="64" src="docs/logo.png" /> An open-source JDBC Type-4 driver 
 for [CockroachDB](https://www.cockroachlabs.com/) that wraps the PostgreSQL
 JDBC driver ([pgjdbc](https://jdbc.postgresql.org/)) that communicates in the PostgreSQL native network 
 wire (v3.0) protocol with CockroachDB.
+
+## Maintenance Status
+
+Active development is paused. The repository remains available for use, reference, and potential community continuation.
+No ongoing maintenance or support is guaranteed.
 
 ## Supported Versions
 
