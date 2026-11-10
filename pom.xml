@@ -170,6 +170,8 @@
                         <includes>
                             <include>**/CockroachSQLParser.g4</include>
                             <include>**/CockroachSQLLexer.g4</include>
+                            <include>**/CockroachSelectParser.g4</include>
+                            <include>**/CockroachSelectLexer.g4</include>
                         </includes>
                     </configuration>
                 </plugin>

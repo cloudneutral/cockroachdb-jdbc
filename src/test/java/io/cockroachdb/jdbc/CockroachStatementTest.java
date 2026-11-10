@@ -64,20 +64,20 @@ public class CockroachStatementTest {
         statementUnderTest.execute("SET implicitSelectForUpdate=true");
 
         Assertions.assertNotEquals(SelectForUpdateProcessor.INSTANCE, connectionSettings.getQueryProcessor());
-        Assertions.assertEquals("select 1 FOR UPDATE",
-                connectionSettings.getQueryProcessor().processQuery(connectionMock, "select 1"));
+        Assertions.assertEquals("select 1 from t FOR UPDATE",
+                connectionSettings.getQueryProcessor().processQuery(connectionMock, "select 1 from t"));
         Assertions.assertTrue(connectionSettings.getQueryProcessor().isTransactionScoped());
 
         statementUnderTest.execute("SET implicitSelectForUpdate=false");
 
-        Assertions.assertEquals("select 1",
-                connectionSettings.getQueryProcessor().processQuery(connectionMock, "select 1"));
+        Assertions.assertEquals("select 1 from t",
+                connectionSettings.getQueryProcessor().processQuery(connectionMock, "select 1 from t"));
         Assertions.assertTrue(connectionSettings.getQueryProcessor().isTransactionScoped());
 
         connection.commit();
 
-        Assertions.assertEquals("select 1",
-                connectionSettings.getQueryProcessor().processQuery(connectionMock, "select 1"));
+        Assertions.assertEquals("select 1 from t",
+                connectionSettings.getQueryProcessor().processQuery(connectionMock, "select 1 from t"));
         Assertions.assertFalse(connectionSettings.getQueryProcessor().isTransactionScoped());
     }
 
